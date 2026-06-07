@@ -21,7 +21,7 @@ SCAN_SUFFIXES = {
     ".phtm",
 }
 
-SKIP_DIRS = {".git", "__pycache__", ".pytest_cache"}
+SKIP_DIRS = {".git", "__pycache__", ".pytest_cache", "memory"}
 
 
 def iter_repo_text_files(root: Path):

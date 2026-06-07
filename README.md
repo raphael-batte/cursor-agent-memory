@@ -1,11 +1,11 @@
 # Cursor Agent Memory
 
-**Version:** 0.8.7 — see [VERSIONING.md](VERSIONING.md) · CI on push/PR · Release on tag ([workflows](.github/workflows/))
+**Version:** 0.8.9 — see [VERSIONING.md](VERSIONING.md) · CI on push/PR · Release on tag ([workflows](.github/workflows/))
 Created by [raphaelbatte](https://github.com/raphael-batte) · [raphbatte.com](https://raphbatte.com)
 
 ## What this is
 
-**Cursor forgets between sessions.** This is not a notes folder — it is a **routed multi-layer memory system** for AI agents:
+**Cursor forgets between sessions.** One `@agent-memory` skill, a private `memory/` hub, and routed layers — not a notes dump.
 
 - **Global context** — who you are, which projects, cross-repo rules, infra
 - **Feedback** — what worked (+) and what to stop proposing (−)

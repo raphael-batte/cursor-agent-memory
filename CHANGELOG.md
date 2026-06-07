@@ -6,6 +6,19 @@ Data hub (`$MEMORY_HOME`) is **not** versioned with this file.
 
 ## [Unreleased]
 
+## [0.8.9] - 2026-06-07
+
+### Added
+
+- First sync seeds **`[bootstrap]` Decisions** from keyword-tagged user messages when `## Decisions` is empty
+- ONBOARDING: post-sync agent offers (fill Me, review bootstrap, handoff setup); handoff section
+
+### Changed
+
+- `sync-memory.py` applies distills to `chats/projects/*.md` (`Recent` + bootstrap Decisions)
+- `templates/feedback/fails.md` — no placeholder `_superseded § <heading>` (verify passes on fresh hub)
+- README / GitHub description copy tightened
+
 ## [0.8.8] - 2026-06-07
 
 ### Changed

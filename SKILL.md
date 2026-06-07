@@ -8,7 +8,7 @@ description: >
 
 # Agent Memory
 
-**Version:** 0.8.7 — see [VERSIONING.md](VERSIONING.md)
+**Version:** 0.8.9 — see [VERSIONING.md](VERSIONING.md)
 
 **Full protocol:** [INSTRUCTIONS.md](INSTRUCTIONS.md) · **Overview:** [ARCHITECTURE.md](ARCHITECTURE.md)
 
@@ -63,6 +63,12 @@ Optional preview: add `--dry-run` before the real run. Reload Cursor after hooks
 Always end with:
 
 `Projects in GLOBAL_CONTEXT: N · Chat distills: M · Handoff: off|optional|required · Ready to work.`
+
+Then **offer** (user confirms each — do not run silently):
+
+1. **`fill Me in GLOBAL_CONTEXT from our chats`** — infer role, stack, tools, style from distilled history.
+2. **Review `[bootstrap]` Decisions** in `chats/projects/*.md` — refine heuristic seeds or run semantic merge from `merge-staging/`.
+3. **Handoff** — if mode is not `off`, explain `AGENT_HANDOFF.md` per repo (`templates/repo-handoff/`) and offer to copy into the open workspace.
 
 ---
 

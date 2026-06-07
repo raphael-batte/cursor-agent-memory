@@ -85,6 +85,7 @@ def run_merge(
     extract: dict,
     dry_run: bool = False,
     apply: bool = False,
+    bootstrap_decisions: bool = False,
     project_override: str | None = None,
     projects_root: Path = DEFAULT_PROJECTS_ROOT,
 ) -> dict:
@@ -170,6 +171,7 @@ def run_merge(
             project_path,
             extract,
             today=entry["distilled_at"],
+            bootstrap_decisions=bootstrap_decisions,
         )
 
     return result
@@ -190,7 +192,12 @@ def main() -> int:
     parser.add_argument(
         "--apply",
         action="store_true",
-        help="Bookkeeping only: Recent≤3 + Summary if empty (Decisions → agent via staging)",
+        help="Recent≤3; optional [bootstrap] Decisions when empty (use with --bootstrap-decisions)",
+    )
+    parser.add_argument(
+        "--bootstrap-decisions",
+        action="store_true",
+        help="Seed ## Decisions from keyword-tagged user messages when section is empty",
     )
     parser.add_argument(
         "--project",
@@ -230,6 +237,7 @@ def main() -> int:
         extract=extract,
         dry_run=args.dry_run,
         apply=args.apply,
+        bootstrap_decisions=args.bootstrap_decisions,
         project_override=args.project,
     )
 

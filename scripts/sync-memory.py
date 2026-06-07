@@ -166,6 +166,8 @@ def run_sync(
                 memory_home=memory_home,
                 projects_root=projects_root,
                 strategy=strategy,
+                apply=True,
+                bootstrap_decisions=True,
             )
             distill_details.append(
                 {"chat_id": row["id"], "project": row["project"], **out}

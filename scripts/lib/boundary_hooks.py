@@ -108,6 +108,8 @@ def distill_jsonl(
     memory_home: Path,
     projects_root: Path,
     strategy: str = "auto",
+    apply: bool = False,
+    bootstrap_decisions: bool = False,
 ) -> dict[str, Any]:
     chat_id = jsonl.stem
     extract_mod, merge_mod = _load_distill_modules()
@@ -127,7 +129,8 @@ def distill_jsonl(
         chat_id=chat_id,
         extract=extract,
         dry_run=False,
-        apply=False,
+        apply=apply,
+        bootstrap_decisions=bootstrap_decisions,
     )
     return {
         "status": "distilled",

@@ -42,6 +42,51 @@ class TestProjectMerge(unittest.TestCase):
             recent = pm._bullets(pm._parse_sections(text)[1].get("Recent", ""))
             self.assertLessEqual(len(recent), 3)
 
+    def test_bootstrap_decisions_when_empty(self) -> None:
+        extract = {
+            "uuid": "x",
+            "workspace_slug": "app",
+            "first_query": "q",
+            "user_messages": [
+                "We decided to use docker for production deploy on the main server",
+                "short",
+            ],
+            "user_message_count": 2,
+            "strategy": "tail",
+            "keywords_hit": ["deploy", "docker", "prod"],
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "app.md"
+            path.write_text(
+                "# app\n\n## Decisions\n\n\n## Recent\n\n",
+                encoding="utf-8",
+            )
+            result = pm.apply_extract_to_project(
+                path, extract, today="2026-06-07", bootstrap_decisions=True
+            )
+            text = path.read_text(encoding="utf-8")
+            self.assertEqual(result["decisions_added"], 1)
+            self.assertIn("[bootstrap]", text)
+            self.assertIn("docker", text)
+
+    def test_bootstrap_skips_when_decisions_exist(self) -> None:
+        extract = {
+            "uuid": "x",
+            "workspace_slug": "app",
+            "user_messages": ["decided to deploy with docker on production"],
+            "user_message_count": 1,
+            "strategy": "tail",
+            "keywords_hit": ["deploy"],
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "app.md"
+            path.write_text("## Decisions\n\n- Curated\n\n## Recent\n\n", encoding="utf-8")
+            result = pm.apply_extract_to_project(
+                path, extract, bootstrap_decisions=True
+            )
+            self.assertEqual(result["decisions_added"], 0)
+            self.assertNotIn("[bootstrap]", path.read_text(encoding="utf-8"))
+
     def test_apply_leaves_summary_empty(self) -> None:
         extract = {
             "uuid": "x",

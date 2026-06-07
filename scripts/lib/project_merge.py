@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from lib.defaults import MAX_LAYER_FILE_LINES
+from lib.defaults import DEFAULT_KEYWORDS, MAX_LAYER_FILE_LINES
 from lib.distill_links import recent_bullet
 from lib.secrets_guard import scan_file
 from lib.timestamps import now_iso
@@ -80,16 +80,49 @@ def recent_line(extract: dict, today: str | None = None) -> str:
     return recent_bullet(extract, today or _today())
 
 
+def decision_candidates_from_extract(
+    extract: dict,
+    *,
+    max_items: int = 3,
+    max_len: int = 200,
+    min_len: int = 24,
+) -> list[str]:
+    """
+    Heuristic decision seeds from user messages (keyword signal).
+    Used only when Decisions is empty — agent should refine later.
+    """
+    seen: set[str] = set()
+    out: list[str] = []
+    for msg in extract.get("user_messages") or []:
+        text = re.sub(r"\s+", " ", msg.strip())
+        if len(text) < min_len:
+            continue
+        lower = text.lower()
+        if not any(kw in lower for kw in DEFAULT_KEYWORDS):
+            continue
+        if len(text) > max_len:
+            text = text[: max_len - 3].rstrip() + "..."
+        if text in seen:
+            continue
+        seen.add(text)
+        out.append(f"[bootstrap] {text}")
+        if len(out) >= max_items:
+            break
+    return out
+
+
 def apply_extract_to_project(
     project_path: Path,
     extract: dict,
     *,
     max_recent: int = 3,
     today: str | None = None,
+    bootstrap_decisions: bool = False,
 ) -> dict:
     """
-    Bookkeeping merge only: _Last updated_ + Recent≤3.
-    Does NOT write Summary or Decisions — agent merges from staging.
+    Bookkeeping merge: _Last updated_ + Recent≤3.
+    Optional bootstrap_decisions when ## Decisions is empty (first sync).
+    Does NOT write Summary — agent curates from staging.
     Raises ValueError if merged text fails secrets scan.
     """
     day = today or _today()
@@ -124,6 +157,13 @@ def apply_extract_to_project(
     recent_items = [new_recent_line] + [r for r in existing_recent if r != new_recent_line]
     sections["Recent"] = _format_bullets(recent_items[:max_recent])
 
+    decisions_added = 0
+    if bootstrap_decisions and not _bullets(sections.get("Decisions", "")):
+        seeds = decision_candidates_from_extract(extract)
+        if seeds:
+            sections["Decisions"] = _format_bullets(seeds)
+            decisions_added = len(seeds)
+
     merged = _join_sections(preamble, sections)
 
     tmp = project_path.with_suffix(".md.tmpcheck")
@@ -141,7 +181,7 @@ def apply_extract_to_project(
 
     return {
         "project_file": str(project_path),
-        "decisions_added": 0,
+        "decisions_added": decisions_added,
         "recent_lines": min(len(recent_items), max_recent),
         "lines": len(merged.splitlines()),
         "over_limit": len(merged.splitlines()) > MAX_LAYER_FILE_LINES,

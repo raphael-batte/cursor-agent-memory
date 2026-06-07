@@ -4,9 +4,8 @@ _Index: [INDEX.md](INDEX.md)_
 
 What failed or was rejected (`−`). Add when user says no, an idea backfires, or a lesson is learned.
 
-When a fail becomes a **current rule**, add `_superseded → conventions.md § <heading>` so agents do not read contradictions.
+When a fail becomes a **current rule**, add it to `conventions.md` and mark the fail line with `_superseded → conventions.md § SectionName` (must match an existing `##` heading in conventions.md).
 
-## YYYY-MM Example topic
+## Getting started
 
--  (what failed and why)
-  _superseded → conventions.md § <heading> (optional keyword)_
+- (add entries when the user rejects an approach or a lesson is learned)
