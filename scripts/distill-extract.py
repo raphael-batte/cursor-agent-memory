@@ -12,11 +12,17 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
+from lib.assistant_snippets import extract_assistant_snippets  # noqa: E402
 from lib.defaults import (  # noqa: E402
     AUTO_SPREAD_THRESHOLD,
     DEFAULT_KEYWORDS,
+    DISTILL_TOKEN_BUDGET,
+    MAP_REDUCE_THRESHOLD,
+    MAP_REDUCE_WINDOW_SIZE,
     MAX_DISTILL_MESSAGES,
 )
+from lib.message_importance import mechanical_bullets  # noqa: E402
+from lib.token_budget import select_by_importance, window_messages  # noqa: E402
 from lib.secrets_guard import is_terminal_noise, sanitize_message  # noqa: E402
 from lib.transcript import (  # noqa: E402
     TranscriptSchemaError,
@@ -69,9 +75,28 @@ def select_spread(messages: list[str], max_messages: int) -> list[str]:
 
 
 def select_messages(messages: list[str], max_messages: int, strategy: str) -> list[str]:
+    if strategy in ("spread", "tail", "auto"):
+        picked = select_by_importance(
+            messages,
+            max_messages=max_messages,
+            token_budget=DISTILL_TOKEN_BUDGET,
+        )
+        if picked:
+            return picked
     if strategy == "spread":
         return select_spread(messages, max_messages)
     return select_tail(messages, max_messages)
+
+
+def build_window_summaries(messages: list[str]) -> list[dict]:
+    """Map-reduce windows — mechanical bullets per window for staging."""
+    windows = window_messages(messages, window_size=MAP_REDUCE_WINDOW_SIZE)
+    out: list[dict] = []
+    for i, chunk in enumerate(windows, start=1):
+        bullets = mechanical_bullets(chunk, max_items=3)
+        if bullets:
+            out.append({"window": i, "messages": len(chunk), "bullets": bullets})
+    return out
 
 
 def parse_user_messages(jsonl: Path) -> tuple[list[str], int, str]:
@@ -129,16 +154,43 @@ def build_extract(
     projects_root: Path = DEFAULT_PROJECTS_ROOT,
     max_messages: int | None = MAX_DISTILL_MESSAGES,
     strategy: str = "tail",
+    memory_home: Path | None = None,
+    manifest_entry: dict | None = None,
 ) -> dict:
-    messages, total, effective, secrets_redacted, adapter = extract_user_messages(
-        jsonl, max_messages=max_messages, strategy=strategy
-    )
+    all_msgs, secrets_redacted, adapter = parse_user_messages(jsonl)
+    total = len(all_msgs)
+    effective = resolve_strategy(strategy, total)
+
+    if effective == "all" or max_messages is None:
+        messages = all_msgs
+    elif max_messages <= 0:
+        messages = []
+    elif total <= max_messages:
+        messages = all_msgs
+    else:
+        messages = select_messages(all_msgs, max_messages, effective)
+
     workspace = workspace_from_path(jsonl, projects_root)
     st = jsonl.stat()
     truncated = effective != "all" and total > len(messages)
     first_query = messages[0][:140] if messages else "(no user text)"
+    assistant_snippets = extract_assistant_snippets(jsonl)
+    window_summaries = (
+        build_window_summaries(all_msgs) if total >= MAP_REDUCE_THRESHOLD else []
+    )
 
-    return {
+    incremental: dict | None = None
+    if memory_home is not None:
+        from lib.rolling_distill import build_incremental  # noqa: E402
+
+        incremental = build_incremental(
+            all_msgs,
+            memory_home=memory_home,
+            chat_id=jsonl.stem,
+            manifest_entry=manifest_entry,
+        )
+
+    payload: dict = {
         "uuid": jsonl.stem,
         "date": datetime.fromtimestamp(st.st_mtime).strftime("%Y-%m-%d"),
         "workspace": workspace,
@@ -153,7 +205,14 @@ def build_extract(
         "source_path": str(jsonl.resolve()),
         "size_bytes": st.st_size,
         "transcript_adapter": adapter,
+        "assistant_snippets": assistant_snippets,
+        "window_summaries": window_summaries,
     }
+    if incremental:
+        payload["incremental"] = incremental
+        if incremental.get("rolling_summary"):
+            payload["rolling_summary"] = incremental["rolling_summary"]
+    return payload
 
 
 def main() -> int:

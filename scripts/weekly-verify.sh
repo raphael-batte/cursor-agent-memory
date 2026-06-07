@@ -26,6 +26,7 @@ MEMORY_HOME="$(resolve_memory_home "${MEMORY_HOME:-}")"
 if [[ "$DRY" -eq 1 ]]; then
   echo "would run memory-doctor --strict-secrets --gitleaks"
   echo "would run verify-memory --strict-secrets --gitleaks -q"
+  echo "would run memory-health.py"
   echo "MEMORY_HOME=$MEMORY_HOME"
   exit 0
 fi
@@ -42,6 +43,8 @@ LOG_FILE="$LOG_DIR/weekly-verify-$STAMP.log"
   python3 "$FRAMEWORK/scripts/memory-doctor.py" --memory-home "$MEMORY_HOME" --strict-secrets --gitleaks
   echo
   python3 "$FRAMEWORK/scripts/verify-memory.py" --memory-home "$MEMORY_HOME" --strict-secrets --gitleaks -q
+  echo
+  python3 "$FRAMEWORK/scripts/memory-health.py" --memory-home "$MEMORY_HOME"
   echo
   echo "done"
 } 2>&1 | tee "$LOG_FILE"

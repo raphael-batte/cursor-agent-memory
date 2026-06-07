@@ -10,7 +10,7 @@ from lib.distill_links import enrich_extract, format_chat_markdown_link, recent_
 from lib.forward_pointer import (
     NO_POINTER_MARKER,
     STALE_POINTER_PREFIX,
-    extract_forward_pointer,
+    extract_forward_pointer_result,
 )
 from lib.secrets_guard import scan_file
 from lib.timestamps import now_iso
@@ -226,7 +226,8 @@ def apply_extract_to_project(
             sections["Decisions"] = _format_bullets(seeds)
             decisions_added = len(seeds)
 
-    next_step = extract_forward_pointer(extract)
+    pointer_result = extract_forward_pointer_result(extract)
+    next_step = pointer_result.text
     next_body, next_kind = format_next_step_line(
         extract, next_step, sections.get("Next step", "")
     )
@@ -255,6 +256,8 @@ def apply_extract_to_project(
         "next_step_updated": next_step_updated,
         "next_step_kind": next_kind,
         "next_step_placeholder": next_step_placeholder,
+        "pointer_confidence": pointer_result.confidence,
+        "pointer_source": pointer_result.source,
         "recent_lines": min(len(recent_items), max_recent),
         "lines": len(merged.splitlines()),
         "over_limit": len(merged.splitlines()) > MAX_LAYER_FILE_LINES,

@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -13,7 +14,10 @@ SCRIPT_DIR = Path(__file__).resolve().parents[1]
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
+from lib.boundary_debounce import record_boundary_distill, should_skip_debounce  # noqa: E402
 from lib.chats_manifest import load_manifest, processed_by_id  # noqa: E402
+from lib.defaults import POINTER_LOW_CONFIDENCE  # noqa: E402
+from lib.distill_metrics import append_metric  # noqa: E402
 from lib.memory_config import resolve_memory_home  # noqa: E402
 from lib.pending_chats import (  # noqa: E402
     list_chats_needing_distill,
@@ -102,6 +106,13 @@ def _load_distill_modules() -> tuple[Any, Any]:
     return _DISTILL_MODULES_CACHE
 
 
+def _record_metric(memory_home: Path, row: dict[str, Any]) -> None:
+    try:
+        append_metric(memory_home, row)
+    except OSError:
+        pass
+
+
 def distill_jsonl(
     jsonl: Path,
     *,
@@ -110,20 +121,39 @@ def distill_jsonl(
     strategy: str = "auto",
     apply: bool = True,
     bootstrap_decisions: bool = False,
+    event: str | None = None,
 ) -> dict[str, Any]:
     chat_id = jsonl.stem
     extract_mod, merge_mod = _load_distill_modules()
+    manifest = load_manifest(memory_home / "chats" / "manifest.json")
+    manifest_entry = processed_by_id(manifest).get(chat_id)
+    t0 = time.perf_counter()
     try:
         extract = extract_mod.build_extract(
-            jsonl, projects_root=projects_root, strategy=strategy
+            jsonl,
+            projects_root=projects_root,
+            strategy=strategy,
+            memory_home=memory_home,
+            manifest_entry=manifest_entry,
         )
     except TranscriptSchemaError as exc:
-        return {
+        out = {
             "status": "error",
             "reason": "transcript_schema",
             "detail": str(exc),
             "chat_id": chat_id,
         }
+        _record_metric(
+            memory_home,
+            {
+                "event": event or "distill",
+                "status": "error",
+                "chat_id": chat_id,
+                "reason": "transcript_schema",
+                "duration_ms": int((time.perf_counter() - t0) * 1000),
+            },
+        )
+        return out
     merge_result = merge_mod.run_merge(
         memory_home=memory_home,
         chat_id=chat_id,
@@ -133,10 +163,28 @@ def distill_jsonl(
         force_apply=apply,
         bootstrap_decisions=bootstrap_decisions,
     )
+    duration_ms = int((time.perf_counter() - t0) * 1000)
+    apply_result = merge_result.get("apply_result") or {}
+    _record_metric(
+        memory_home,
+        {
+            "event": event or "distill",
+            "status": "distilled",
+            "chat_id": chat_id,
+            "duration_ms": duration_ms,
+            "pointer_kind": apply_result.get("next_step_kind"),
+            "pointer_confidence": apply_result.get("pointer_confidence"),
+            "pointer_source": apply_result.get("pointer_source"),
+            "incremental": bool((extract.get("incremental") or {}).get("is_incremental")),
+            "window_count": len(extract.get("window_summaries") or []),
+        },
+    )
+    record_boundary_distill(memory_home, chat_id)
     return {
         "status": "distilled",
         "chat_id": chat_id,
         "transcript": str(jsonl),
+        "duration_ms": duration_ms,
         **merge_result,
     }
 
@@ -152,13 +200,49 @@ def run_boundary_distill(
         payload, memory_home=memory_home, projects_root=projects_root
     )
     if jsonl is None:
+        _record_metric(
+            memory_home,
+            {
+                "event": payload.get("hook_event_name", "boundary"),
+                "status": "skipped",
+                "reason": "no_transcript",
+            },
+        )
         return {"status": "skipped", "reason": "no_transcript"}
 
     chat_id = jsonl.stem
+    event = str(payload.get("hook_event_name") or "boundary")
+
+    if should_skip_debounce(memory_home, chat_id):
+        _record_metric(
+            memory_home,
+            {
+                "event": event,
+                "status": "skipped",
+                "chat_id": chat_id,
+                "reason": "debounced",
+            },
+        )
+        return {
+            "status": "skipped",
+            "reason": "debounced",
+            "chat_id": chat_id,
+            "transcript": str(jsonl),
+        }
+
     skip = should_skip_boundary_distill(
         memory_home=memory_home, chat_id=chat_id, jsonl=jsonl
     )
     if skip:
+        _record_metric(
+            memory_home,
+            {
+                "event": event,
+                "status": "skipped",
+                "chat_id": chat_id,
+                "reason": skip,
+            },
+        )
         return {
             "status": "skipped",
             "reason": skip,
@@ -171,8 +255,9 @@ def run_boundary_distill(
         memory_home=memory_home,
         projects_root=projects_root,
         strategy=strategy,
+        event=event,
     )
-    result["event"] = payload.get("hook_event_name")
+    result["event"] = event
     return result
 
 
@@ -218,12 +303,27 @@ def run_session_start_catchup(
             memory_home=memory_home,
             projects_root=projects_root,
             strategy=strategy,
+            event="sessionStart",
         )
         results.append(out)
         if out.get("status") == "distilled":
             distilled += 1
         elif out.get("status") == "error":
             errors += 1
+        elif out.get("status") == "skipped":
+            skipped += 1
+
+    _record_metric(
+        memory_home,
+        {
+            "event": "sessionStart",
+            "status": "catchup",
+            "distilled": distilled,
+            "skipped": skipped,
+            "errors": errors,
+            "candidates": len(pending),
+        },
+    )
 
     return {
         "status": "catchup",
@@ -247,6 +347,26 @@ def handle_session_start(
         payload, memory_home=memory_home, projects_root=projects_root
     )
     return {"catchup": catchup}
+
+
+def _session_end_user_message(distill: dict[str, Any]) -> str | None:
+    if distill.get("status") != "distilled":
+        return None
+    apply_result = distill.get("apply_result") or {}
+    kind = apply_result.get("next_step_kind")
+    conf = float(apply_result.get("pointer_confidence") or 0.0)
+    project_rel = distill.get("project_rel", "chats/projects/<slug>.md")
+    if kind in ("placeholder_empty", "placeholder_stale"):
+        return (
+            f"[agent-memory] Review ## Next step in {project_rel} — "
+            "refine from merge-staging if [?]."
+        )
+    if conf < POINTER_LOW_CONFIDENCE:
+        return (
+            f"[agent-memory] Low-confidence pointer ({conf:.2f}) in {project_rel} — "
+            "curate ## Next step from staging tail."
+        )
+    return None
 
 
 def handle_boundary(
@@ -276,6 +396,10 @@ def handle_boundary(
             staging = distill.get("staging_path", "")
             msg += f" Staging: {staging}"
         result["user_message"] = msg
+    elif event == "sessionEnd":
+        msg = _session_end_user_message(distill)
+        if msg:
+            result["user_message"] = msg
 
     return result
 

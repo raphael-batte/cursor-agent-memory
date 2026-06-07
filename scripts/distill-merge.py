@@ -20,6 +20,8 @@ from lib.chats_manifest import (  # noqa: E402
     save_manifest,
     upsert_processed,
 )
+from lib.distill_watermark import watermark_for_manifest  # noqa: E402
+from lib.rolling_distill import update_rolling_after_merge  # noqa: E402
 from lib.apply_guard import check_cli_apply_guard  # noqa: E402
 from lib.defaults import APPLY_REVIEW_MAX_DAYS  # noqa: E402
 from lib.distill_links import enrich_extract, recent_bullet  # noqa: E402
@@ -64,6 +66,28 @@ def build_staging_markdown(extract: dict, *, project_rel: str) -> str:
             snippet = snippet[:237] + "..."
         if snippet:
             lines.append(f"- {snippet}")
+
+    rolling = extract.get("rolling_summary") or []
+    if rolling:
+        lines.extend(["", "## Rolling summary (incremental)", ""])
+        for bullet in rolling[:8]:
+            lines.append(f"- {bullet}")
+
+    windows = extract.get("window_summaries") or []
+    if windows:
+        lines.extend(["", "## Window summaries (map-reduce)", ""])
+        for win in windows[:6]:
+            if not isinstance(win, dict):
+                continue
+            wn = win.get("window", "?")
+            for bullet in win.get("bullets") or []:
+                lines.append(f"- [w{wn}] {bullet}")
+
+    snippets = extract.get("assistant_snippets") or []
+    if snippets:
+        lines.extend(["", "## Assistant snippets (selective)", ""])
+        for snip in snippets[:5]:
+            lines.append(f"- {snip}")
 
     lines.extend(
         [
@@ -123,6 +147,12 @@ def run_merge(
     else:
         distilled_to = [project_rel]
 
+    source = extract.get("source_path")
+    wm = (
+        watermark_for_manifest(Path(str(source)).expanduser())
+        if source
+        else {"user_message_count": extract.get("user_message_count"), "tail_hash": ""}
+    )
     entry = make_processed_entry(
         chat_id=chat_id,
         workspace=extract.get("workspace", "unknown"),
@@ -130,6 +160,8 @@ def run_merge(
         summary=extract.get("first_query", ""),
         distilled_to=distilled_to,
         transcript_available=bool(extract.get("transcript_available")),
+        watermark_user_count=int(wm.get("user_message_count") or 0),
+        watermark_tail_hash=str(wm.get("tail_hash") or ""),
     )
 
     staging_dir = memory_home / "chats" / "merge-staging"
@@ -195,6 +227,16 @@ def run_merge(
             extract,
             today=entry["distilled_at"],
             bootstrap_decisions=bootstrap_decisions,
+        )
+
+    inc = extract.get("incremental") or {}
+    if inc.get("incremental_count"):
+        update_rolling_after_merge(
+            memory_home,
+            chat_id,
+            total_user_count=int(extract.get("user_message_count") or 0),
+            incremental_bullets=inc.get("incremental_bullets"),
+            incremental_from=int(inc.get("incremental_from") or 0),
         )
 
     return result
@@ -264,7 +306,15 @@ def main() -> int:
         if jsonl is None:
             print(f"Error: transcript not found: {chat_id}", file=sys.stderr)
             return 1
-        extract = de.build_extract(jsonl, projects_root=projects_root, strategy=args.strategy)
+        manifest = load_manifest(memory_home / "chats" / "manifest.json")
+        manifest_entry = processed_by_id(manifest).get(chat_id)
+        extract = de.build_extract(
+            jsonl,
+            projects_root=projects_root,
+            strategy=args.strategy,
+            memory_home=memory_home,
+            manifest_entry=manifest_entry,
+        )
 
     result = run_merge(
         memory_home=memory_home,

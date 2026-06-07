@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from lib.chats_manifest import load_manifest, processed_by_id
-from lib.timestamps import transcript_is_newer_than_distill
+from lib.distill_watermark import needs_distill_with_watermark
 from lib.transcript_cursor import build_transcript_index, workspace_slug
 
 DEFAULT_PROJECTS_ROOT = Path.home() / ".cursor/projects"
@@ -32,11 +32,9 @@ def needs_distill(
     jsonl: Path,
     manifest: dict[str, Any],
 ) -> bool:
-    """True when chat is unprocessed or transcript mtime > distilled_at."""
+    """True when unprocessed, watermark changed, or legacy mtime > distilled_at."""
     entry = processed_by_id(manifest).get(chat_id)
-    if not entry:
-        return True
-    return transcript_is_newer_than_distill(jsonl, entry.get("distilled_at"))
+    return needs_distill_with_watermark(entry, jsonl)
 
 
 def slugs_from_workspace_roots(roots: list[str] | None) -> set[str]:

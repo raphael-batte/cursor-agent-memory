@@ -99,6 +99,8 @@ def make_processed_entry(
     distilled_at: str | None = None,
     transcript_available: bool | None = None,
     workspace_path: str | None = None,
+    watermark_user_count: int | None = None,
+    watermark_tail_hash: str | None = None,
 ) -> dict[str, Any]:
     today = distilled_at or now_iso()
     slug = workspace_slug(workspace)
@@ -118,6 +120,10 @@ def make_processed_entry(
         entry["workspace_path"] = resolved_path
     if transcript_available is not None:
         entry["transcript_available"] = transcript_available
+    if watermark_user_count is not None:
+        entry["watermark_user_count"] = watermark_user_count
+    if watermark_tail_hash:
+        entry["watermark_tail_hash"] = watermark_tail_hash
     return entry
 
 

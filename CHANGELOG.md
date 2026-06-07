@@ -6,6 +6,23 @@ Data hub (`$MEMORY_HOME`) is **not** versioned with this file.
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-06-07
+
+### Added
+
+- **Manifest watermark** — `watermark_user_count` + `watermark_tail_hash` in `manifest.json`; `needs_distill()` prefers content delta over mtime alone (`transcript_stats.py`, `distill_watermark.py`)
+- **Boundary debounce** — skip duplicate `preCompact`/`sessionEnd` distill for same chat within 30s (`boundary_debounce.py`)
+- **Distill metrics** — append-only `logs/agent-memory-metrics.jsonl`; `memory-health.py` reports pointer hit-rate, errors, avg duration; wired into `weekly-verify.sh` and `memory-status.py`
+- **Importance-weighted extract** — message scoring + token budget sampling; map-reduce `window_summaries` for chats ≥80 messages (`message_importance.py`, `token_budget.py`)
+- **Assistant snippets** — selective assistant tail blocks in extract/staging (`assistant_snippets.py`)
+- **Rolling incremental distill** — `chats/rolling/<chat>.json` + incremental bullets in staging (`rolling_distill.py`)
+- **Pointer confidence** — `PointerResult` with source tier + confidence; `sessionEnd` prompts agent to curate `## Next step` when placeholder or low confidence
+
+### Changed
+
+- **Boundary hook** — `agent-memory-boundary.sh` splits stdout (JSON) from stderr (log only); boundary hooks record timing + metrics
+- **`build_extract`** — accepts `memory_home` + manifest entry for incremental/rolling context
+
 ## [0.9.4] - 2026-06-07
 
 ### Security

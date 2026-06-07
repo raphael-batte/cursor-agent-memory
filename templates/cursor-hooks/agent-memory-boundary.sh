@@ -13,11 +13,19 @@ FRAMEWORK="$(resolve_hook_framework)" || {
 LOG="${AGENT_MEMORY_BOUNDARY_LOG:-$HOME/.cursor/hooks/agent-memory-boundary.log}"
 
 INPUT="$(cat)"
-RESULT="$(python3 "$FRAMEWORK/scripts/boundary-hooks.py" boundary <<<"$INPUT" 2>&1)" || true
+TMPERR="$(mktemp)"
+trap 'rm -f "$TMPERR"' EXIT
+EXIT=0
+RESULT="$(python3 "$FRAMEWORK/scripts/boundary-hooks.py" boundary <<<"$INPUT" 2>"$TMPERR")" || EXIT=$?
 
 mkdir -p "$(dirname "$LOG")"
 {
-  echo "$(date '+%Y-%m-%d %H:%M:%S') boundary"
+  echo "$(date '+%Y-%m-%d %H:%M:%S') boundary exit=$EXIT"
+  if [[ -s "$TMPERR" ]]; then
+    echo "--- stderr ---"
+    cat "$TMPERR"
+    echo "--- stdout ---"
+  fi
   echo "$RESULT"
 } >>"$LOG"
 

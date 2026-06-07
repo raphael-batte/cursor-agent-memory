@@ -104,6 +104,16 @@ class TestForwardPointer(unittest.TestCase):
             self.assertIsNotNone(hit)
             self.assertIn("\u0440\u0435\u0441\u0438\u043d\u043a", hit)
 
+    def test_pointer_confidence_tiers(self) -> None:
+        extract = {
+            "user_messages": ["okay then deploy the security patch to prod tonight"],
+            "source_path": "/nonexistent/chat.jsonl",
+        }
+        result = fp.extract_forward_pointer_result(extract)
+        self.assertIsNotNone(result.text)
+        self.assertGreaterEqual(result.confidence, 0.8)
+        self.assertEqual(result.source, "user_commitment")
+
     def test_user_fallback_with_action_hint(self) -> None:
         extract = {
             "user_messages": [

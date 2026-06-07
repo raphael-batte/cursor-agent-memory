@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+from dataclasses import dataclass
 from pathlib import Path
 
 from lib.secrets_guard import is_terminal_noise, sanitize_message
@@ -14,6 +15,15 @@ MIN_POINTER_LEN = 12
 
 NO_POINTER_MARKER = "_No forward pointer._"
 STALE_POINTER_PREFIX = "[?]"
+
+_SOURCE_CONFIDENCE: dict[str, float] = {
+    "user_commitment": 0.95,
+    "user_pattern": 0.85,
+    "assistant_pattern": 0.7,
+    "assistant_action": 0.45,
+    "extract_fallback": 0.55,
+    "none": 0.0,
+}
 
 # Ordered — first match wins within _match_patterns.
 # Non-ASCII cue words use \\u escapes (framework source stays English-only).
@@ -64,6 +74,19 @@ _ACTION_HINT = re.compile(
 )
 
 
+@dataclass(frozen=True)
+class PointerResult:
+    text: str | None
+    confidence: float
+    source: str
+
+    @property
+    def is_low_confidence(self) -> bool:
+        from lib.defaults import POINTER_LOW_CONFIDENCE
+
+        return self.text is None or self.confidence < POINTER_LOW_CONFIDENCE
+
+
 def _clean_candidate(text: str) -> str | None:
     line = re.sub(r"\s+", " ", text.strip())
     line = re.sub(r"^[-*•]\s+", "", line)
@@ -94,19 +117,21 @@ def _match_commitment(blob: str) -> str | None:
     return _clean_candidate(m.group(1).split("\n")[0])
 
 
-def _try_user_text(blob: str) -> str | None:
+def _try_user_text(blob: str) -> tuple[str | None, str]:
     norm = normalize_user_text(blob).strip()
     if not norm or is_terminal_noise(norm):
-        return None
+        return None, "none"
     hit = _match_commitment(norm)
     if hit:
-        return hit
+        return hit, "user_commitment"
     hit = _match_patterns(norm)
     if hit:
-        return hit
+        return hit, "user_pattern"
     if "?" not in norm and _ACTION_HINT.search(norm):
-        return _clean_candidate(norm)
-    return None
+        cand = _clean_candidate(norm)
+        if cand:
+            return cand, "user_pattern"
+    return None, "none"
 
 
 def _assistant_text_blocks(jsonl: Path, *, tail_rows: int = 12) -> list[str]:
@@ -166,9 +191,9 @@ def _user_tail_from_extract(extract: dict, *, n: int = 3) -> list[str]:
     return [m for m in msgs[-n:] if isinstance(m, str) and m.strip()]
 
 
-def extract_forward_pointer(extract: dict) -> str | None:
+def extract_forward_pointer_result(extract: dict) -> PointerResult:
     """
-    Heuristic next-step from transcript tail.
+    Heuristic next-step from transcript tail with confidence tier.
     Priority: last raw user (commitment) → user patterns → assistant patterns
     → extract user fallback → assistant action-hint (lowest).
     """
@@ -178,14 +203,16 @@ def extract_forward_pointer(extract: dict) -> str | None:
     if jsonl and jsonl.is_file():
         last_user = _last_raw_user_text(jsonl)
         if last_user:
-            hit = _try_user_text(last_user)
+            hit, tier = _try_user_text(last_user)
             if hit:
-                return hit
+                return PointerResult(hit, _SOURCE_CONFIDENCE[tier], tier)
 
         for blob in reversed(_assistant_text_blocks(jsonl)):
             hit = _match_patterns(blob)
             if hit:
-                return hit
+                return PointerResult(
+                    hit, _SOURCE_CONFIDENCE["assistant_pattern"], "assistant_pattern"
+                )
 
         for blob in reversed(_assistant_text_blocks(jsonl)):
             paras = [p.strip() for p in blob.split("\n\n") if p.strip()]
@@ -195,11 +222,24 @@ def extract_forward_pointer(extract: dict) -> str | None:
             if _ACTION_HINT.search(last):
                 cand = _clean_candidate(last.split("\n")[0])
                 if cand:
-                    return cand
+                    return PointerResult(
+                        cand,
+                        _SOURCE_CONFIDENCE["assistant_action"],
+                        "assistant_action",
+                    )
 
     for msg in reversed(_user_tail_from_extract(extract)):
-        hit = _try_user_text(msg)
+        hit, tier = _try_user_text(msg)
         if hit:
-            return hit
+            conf = _SOURCE_CONFIDENCE.get(
+                "extract_fallback" if tier == "user_pattern" else tier,
+                _SOURCE_CONFIDENCE["extract_fallback"],
+            )
+            src = "extract_fallback" if tier == "user_pattern" else tier
+            return PointerResult(hit, conf, src)
 
-    return None
+    return PointerResult(None, _SOURCE_CONFIDENCE["none"], "none")
+
+
+def extract_forward_pointer(extract: dict) -> str | None:
+    return extract_forward_pointer_result(extract).text

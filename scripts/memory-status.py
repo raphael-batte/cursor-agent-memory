@@ -239,6 +239,15 @@ def verify_summary(memory_home: Path) -> tuple[int, int] | None:
     return vm.summarize_results(results)
 
 
+def metrics_health(memory_home: Path) -> dict | None:
+    try:
+        mh = load_script_module("memory_health", "memory-health.py")
+        rows = mh.read_metrics(memory_home)
+        return mh.analyze_metrics(rows, days=7)
+    except Exception:
+        return None
+
+
 def collect(memory_home: Path, framework_root: Path | None) -> dict:
     wins = memory_home / "feedback" / "wins.md"
     fails = memory_home / "feedback" / "fails.md"
@@ -281,6 +290,7 @@ def collect(memory_home: Path, framework_root: Path | None) -> dict:
         "skills": skills_stats(memory_home, framework_root),
         "rotation": rotation_warnings(memory_home, ROTATE_LINES),
         "verify": verify_summary(memory_home),
+        "metrics_health": metrics_health(memory_home),
         "config": load_hub_config(memory_home),
     }
 
@@ -351,6 +361,19 @@ def print_dashboard(data: dict) -> None:
         mark = "✓" if failed == 0 else "✗"
         print("── Health (verify-memory) ─────────────────")
         print(f"  {mark} {passed}/{passed + failed} checks passed")
+        print()
+
+    mh = data.get("metrics_health")
+    if mh:
+        print("── Distill metrics (7d) ───────────────────")
+        rate = mh.get("pointer_extracted_rate")
+        rate_s = f"{rate * 100:.0f}%" if rate is not None else "—"
+        print(
+            f"  {mh.get('distilled', 0)} distilled · "
+            f"{mh.get('skipped', 0)} skipped · "
+            f"{mh.get('errors', 0)} errors"
+        )
+        print(f"  Pointer extracted: {rate_s} · avg {mh.get('avg_distill_ms') or '—'} ms")
         print()
 
 
