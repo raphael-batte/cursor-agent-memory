@@ -6,6 +6,8 @@ Data hub (`$MEMORY_HOME`) is **not** versioned with this file.
 
 ## [Unreleased]
 
+## [0.9.4] - 2026-06-07
+
 ### Security
 
 - **Expanded secret detection** in `secrets_guard.py` — added provider-prefixed token patterns: Grafana (`glsa_`, `glc_`, legacy `eyJrIjoi…`), Slack (`xox[baprs]-`, `hooks.slack.com` webhooks), Google (`GOCSPX-` OAuth client secret, `6L…` reCAPTCHA, `AIza…` API key), GitHub fine-grained PAT (`github_pat_`), GitLab (`glpat-`), Stripe (`sk_live_`/`rk_live_`), Twilio (`SK…`), SendGrid (`SG.…`), npm (`npm_`), PyPI (`pypi-`); extended AWS to temp creds (`ASIA`) and private-key block to `DSA`/`PGP`
