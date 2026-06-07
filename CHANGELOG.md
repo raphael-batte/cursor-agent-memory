@@ -6,9 +6,20 @@ Data hub (`$MEMORY_HOME`) is **not** versioned with this file.
 
 ## [Unreleased]
 
+## [0.9.2] - 2026-06-07
+
+### Added
+
+- **`apply_guard.py`** — CLI `distill-merge --apply` blocks (exit 2) when curated `## Decisions` exist and last distill > N days; `--force-apply` / `--review-max-days` (default 7)
+- **`init-project-rules.sh`** — generates per-workspace session-start `.mdc` with resolved `MEMORY_HOME` + slug; warns if distill missing
+- **ONBOARDING «Second machine»** — 4-step multi-Mac setup
+
 ### Changed
 
-- README / ARCHITECTURE mermaid + routing docs; GitHub repo description (no handoff)
+- `resolve_memory_home()` — `DeprecationWarning` when reading legacy `~/.config/cursor-agent-memory/config.json`
+- Hooks/sync pass `force_apply=True` — guard applies to CLI only; staging not overwritten on guard fail
+- Hook env `MEMORY_HOME` ignored unless directory exists (skips stale broken paths)
+- `agent-memory-session-end.mdc` — points to session-start rule
 
 ## [0.9.1] - 2026-06-07
 

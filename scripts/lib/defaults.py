@@ -7,6 +7,7 @@ from typing import Any
 # Distill
 MAX_DISTILL_MESSAGES = 30
 AUTO_SPREAD_THRESHOLD = 50
+APPLY_REVIEW_MAX_DAYS = 7
 
 # Layer rotation / verify
 MAX_HANDOFF_LINES = 80

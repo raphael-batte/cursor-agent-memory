@@ -132,7 +132,9 @@ python3 "$FRAMEWORK_ROOT/scripts/memory-doctor.py" --memory-home "$MEMORY_HOME" 
 
 | Problem | Fix |
 |---------|-----|
-| Scripts can't find hub | `dev.config.json` install_root, or `--memory-home`, or init/link |
+| Scripts can't find hub | `dev.config.json` install_root, or `--memory-home`, or `memory-doctor --fix` |
+| Second Mac / synced hub | [ONBOARDING → Second machine](ONBOARDING.md#second-machine-same-hub-new-mac) |
+| Legacy XDG config | Read-only — migrate to hook env + `memory/config.json` |
 | Skills point to old path | `link-cursor-skills.sh --force` from install clone |
 | `list-chats` STALE | Re-distill when transcript mtime > `distilled_at` |
 | verify fails | Remove secrets; fix manifest/GLOBAL_CONTEXT |

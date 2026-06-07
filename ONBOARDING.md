@@ -58,6 +58,31 @@ python3 scripts/verify-memory.py --memory-home "$MEMORY_HOME"
 
 ---
 
+## Second machine (same hub, new Mac)
+
+1. `git clone` / `git pull` your install clone (any path)
+2. `bash scripts/link-cursor-skills.sh --force`
+3. `bash scripts/install-memory-hooks.sh` — writes `~/.cursor/hooks/agent-memory.env`
+4. `python3 scripts/memory-doctor.py --fix` — repairs `memory/config.json` paths
+
+Sync the hub separately: private git / Syncthing / iCloud on `<install>/memory/` only.
+
+Do **not** use the legacy XDG config directory — read-only fallback (deprecated; see hook env).
+
+### Optional: session-start rule (per workspace)
+
+After first sync, install a thin always-on rule with resolved paths:
+
+```bash
+bash scripts/init-project-rules.sh --project /path/to/your/workspace
+# if slug differs from repo folder name:
+bash scripts/init-project-rules.sh --project /path/to/workspace --slug <name-from-chats/projects>
+```
+
+Check distills: `ls memory/chats/projects/`
+
+---
+
 ## Dev + install (framework contributors only)
 
 See previous two-clone workflow in [MIGRATION.md](MIGRATION.md) — `dev.config.json` + `sync-to-install.sh`.
@@ -82,5 +107,7 @@ Transcripts (read-only): `~/.cursor/projects/*/agent-transcripts/`
 | verify failed | `memory-doctor.py --memory-home "$MEMORY_HOME"` |
 | Hooks silent | Reload Cursor; check `~/.cursor/hooks/agent-memory.env` |
 | Stale Next step | Close chat (sessionEnd distill) or `list-chats.py --pending` |
+| Wrong paths after hub sync | `memory-doctor.py --fix`; check `~/.cursor/hooks/agent-memory.env` |
+| Rule reads wrong distill | `init-project-rules.sh --slug <name-from-chats/projects>` |
 
 Details: [MIGRATION.md](MIGRATION.md) · [INSTRUCTIONS.md](INSTRUCTIONS.md)

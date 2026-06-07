@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import warnings
 from pathlib import Path
 
 HUB_DIRNAME = "memory"
@@ -133,7 +134,7 @@ def resolve_memory_home(
     hook_hub = hook.get("MEMORY_HOME", "").strip()
     if hook_hub:
         p = Path(hook_hub).expanduser()
-        if p.is_dir() or p.parent.is_dir():
+        if p.is_dir():
             return p.resolve()
     dev = detect_framework_root_from_script(script_file) if script_file else None
     install = resolve_install_root(dev_root=dev)
@@ -143,6 +144,12 @@ def resolve_memory_home(
     legacy = _read_json(LEGACY_GLOBAL_CONFIG)
     legacy_hub = legacy.get("memory_home", "").strip()
     if legacy_hub:
+        warnings.warn(
+            "Reading memory_home from legacy XDG cursor-agent-memory config is "
+            "deprecated; use Cursor hook env or <install>/memory/config.json instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return Path(legacy_hub).expanduser().resolve()
     if dev is not None and is_dev_project(dev):
         raise RuntimeError(

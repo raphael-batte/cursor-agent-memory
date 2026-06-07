@@ -8,7 +8,7 @@ description: >
 
 # Agent Memory
 
-**Version:** 0.9.1 — see [VERSIONING.md](VERSIONING.md)
+**Version:** 0.9.2 — see [VERSIONING.md](VERSIONING.md)
 
 **Full protocol:** [INSTRUCTIONS.md](INSTRUCTIONS.md) · **Overview:** [ARCHITECTURE.md](ARCHITECTURE.md)
 
@@ -17,7 +17,9 @@ description: >
 | Variable | Meaning | Resolve order |
 |----------|---------|---------------|
 | `$FRAMEWORK_ROOT` | Install clone (Cursor symlink target) | `~/.cursor/hooks/agent-memory.env` → `memory/config.json` |
-| `$MEMORY_HOME` | `<install>/memory/` (gitignored) | `--memory-home` → env → install hub |
+| `$MEMORY_HOME` | `<install>/memory/` (gitignored) | `--memory-home` → env → hook env → install hub |
+
+Legacy XDG cursor-agent-memory config is read-only fallback (deprecated).
 
 Dev clone (`dev.config.json`) stays clean — no `memory/` there. Sync code: `scripts/sync-to-install.sh`.
 

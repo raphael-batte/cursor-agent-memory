@@ -20,6 +20,8 @@ from lib.chats_manifest import (  # noqa: E402
     save_manifest,
     upsert_processed,
 )
+from lib.apply_guard import check_cli_apply_guard  # noqa: E402
+from lib.defaults import APPLY_REVIEW_MAX_DAYS  # noqa: E402
 from lib.distill_links import enrich_extract, recent_bullet  # noqa: E402
 from lib.memory_config import resolve_memory_home  # noqa: E402
 from lib.project_merge import apply_extract_to_project  # noqa: E402
@@ -85,6 +87,8 @@ def run_merge(
     extract: dict,
     dry_run: bool = False,
     apply: bool = False,
+    force_apply: bool = False,
+    review_max_days: int = APPLY_REVIEW_MAX_DAYS,
     bootstrap_decisions: bool = False,
     project_override: str | None = None,
     projects_root: Path = DEFAULT_PROJECTS_ROOT,
@@ -129,13 +133,15 @@ def run_merge(
     )
     staging_md = build_staging_markdown(extract, project_rel=project_rel)
 
+    project_path = memory_home / "chats" / project_rel
+
     result = {
         "chat_id": chat_id,
         "slug": slug,
         "project_rel": project_rel,
         "manifest_path": str(manifest_path),
         "staging_path": str(staging_path),
-        "project_file": str(memory_home / "chats" / project_rel),
+        "project_file": str(project_path),
         "distilled_at": entry["distilled_at"],
         "inserted": True,
         "dry_run": dry_run,
@@ -149,6 +155,19 @@ def run_merge(
                 f"would update Recent in {result['project_file']} (no Decisions)"
             )
         return result
+
+    if apply and not force_apply:
+        block = check_cli_apply_guard(
+            memory_home,
+            chat_id,
+            project_path,
+            manifest,
+            max_age_days=review_max_days,
+        )
+        if block:
+            result["status"] = "blocked"
+            result["block_reason"] = block
+            return result
 
     inserted = upsert_processed(manifest, entry)
     result["inserted"] = inserted
@@ -165,7 +184,6 @@ def run_merge(
     )
 
     if apply:
-        project_path = memory_home / "chats" / project_rel
         result["applied"] = True
         result["apply_result"] = apply_extract_to_project(
             project_path,
@@ -192,7 +210,19 @@ def main() -> int:
     parser.add_argument(
         "--apply",
         action="store_true",
-        help="Recent≤3; optional [bootstrap] Decisions when empty (use with --bootstrap-decisions)",
+        help="Recent≤3 + ## Next step; optional [bootstrap] Decisions when empty",
+    )
+    parser.add_argument(
+        "--force-apply",
+        action="store_true",
+        help="Skip apply guard (hooks use this internally)",
+    )
+    parser.add_argument(
+        "--review-max-days",
+        type=int,
+        default=APPLY_REVIEW_MAX_DAYS,
+        metavar="N",
+        help=f"Apply guard: block CLI --apply when curated Decisions older than N days (default {APPLY_REVIEW_MAX_DAYS})",
     )
     parser.add_argument(
         "--bootstrap-decisions",
@@ -237,6 +267,8 @@ def main() -> int:
         extract=extract,
         dry_run=args.dry_run,
         apply=args.apply,
+        force_apply=args.force_apply,
+        review_max_days=args.review_max_days,
         bootstrap_decisions=args.bootstrap_decisions,
         project_override=args.project,
     )
@@ -247,13 +279,17 @@ def main() -> int:
     else:
         sys.stdout.write(out)
 
+    if result.get("status") == "blocked":
+        print(f"WARNING: {result.get('block_reason')}", file=sys.stderr)
+        return 2
+
     if args.dry_run:
         print(f"dry-run: would write {result['staging_path']}", file=sys.stderr)
     else:
         msg = f"manifest updated; staging: {result['staging_path']}"
         if result.get("applied"):
             ar = result.get("apply_result", {})
-            msg += f"; applied → {ar.get('project_file')} (Recent only)"
+            msg += f"; applied → {ar.get('project_file')} (Recent + Next step)"
         print(msg, file=sys.stderr)
     return 0
 

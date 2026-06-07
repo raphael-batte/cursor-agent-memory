@@ -1,6 +1,6 @@
 # Cursor Agent Memory
 
-**Version:** 0.9.1 — see [VERSIONING.md](VERSIONING.md) · CI on push/PR · Release on tag ([workflows](.github/workflows/))
+**Version:** 0.9.2 — see [VERSIONING.md](VERSIONING.md) · CI on push/PR · Release on tag ([workflows](.github/workflows/))
 Created by [raphaelbatte](https://github.com/raphael-batte) · [raphbatte.com](https://raphbatte.com)
 
 ## What this is
@@ -15,7 +15,7 @@ Agents load **one layer per task** (INDEX-first), not everything every time. Wea
 
 **Clean dev repo + install clone** — edit framework in a GitHub-clean clone; Cursor and your private hub live in the install clone (`<install>/memory/`, gitignored). MIT license.
 
-→ **Setup:** [ONBOARDING.md](ONBOARDING.md)
+→ **Setup:** [ONBOARDING.md](ONBOARDING.md) (incl. [Second machine](ONBOARDING.md#second-machine-same-hub-new-mac))
 
 → **System design:** [ARCHITECTURE.md](ARCHITECTURE.md) · **Agent protocol:** [INSTRUCTIONS.md](INSTRUCTIONS.md) · **Human setup:** [MIGRATION.md](MIGRATION.md)
 

@@ -130,6 +130,7 @@ def distill_jsonl(
         extract=extract,
         dry_run=False,
         apply=apply,
+        force_apply=apply,
         bootstrap_decisions=bootstrap_decisions,
     )
     return {

@@ -7,6 +7,7 @@ import os
 import sys
 import tempfile
 import unittest
+import warnings
 from pathlib import Path
 from unittest import mock
 
@@ -134,6 +135,40 @@ class TestMemoryConfig(unittest.TestCase):
                     with self.assertRaises(RuntimeError) as ctx:
                         mc.resolve_memory_home(None, script_file=str(script))
                     self.assertIn("dev clone", str(ctx.exception).lower())
+
+    def test_legacy_global_config_emits_deprecation_warning(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            legacy_dir = Path(tmp) / ".config" / "cursor-agent-memory"
+            legacy_dir.mkdir(parents=True)
+            hub = Path(tmp) / "legacy-hub"
+            hub.mkdir()
+            legacy_cfg = legacy_dir / "config.json"
+            legacy_cfg.write_text(
+                json.dumps({"memory_home": str(hub)}),
+                encoding="utf-8",
+            )
+            with mock.patch.object(mc, "LEGACY_GLOBAL_CONFIG", legacy_cfg):
+                with mock.patch.object(mc, "default_memory_home", return_value=None):
+                    with mock.patch.object(
+                        mc, "resolve_install_root", return_value=None
+                    ):
+                        with mock.patch.object(
+                            mc, "_load_cursor_hook_env", return_value={}
+                        ):
+                            with mock.patch.dict(os.environ, {}, clear=True):
+                                with warnings.catch_warnings(record=True) as caught:
+                                    warnings.simplefilter("always", DeprecationWarning)
+                                    resolved = mc.resolve_memory_home(
+                                        None, script_file=None
+                                    )
+                                    self.assertEqual(resolved, hub.resolve())
+                                    self.assertGreaterEqual(len(caught), 1)
+                                    self.assertTrue(
+                                        any(
+                                            issubclass(w.category, DeprecationWarning)
+                                            for w in caught
+                                        )
+                                    )
 
     def test_resolve_install_root_from_dev_config(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
