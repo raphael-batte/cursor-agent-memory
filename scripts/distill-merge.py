@@ -1,0 +1,274 @@
+#!/usr/bin/env python3
+"""Merge distill extract into manifest + staging markdown (preserve chat language)."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from datetime import datetime
+from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(SCRIPT_DIR))
+
+from lib.chats_manifest import (  # noqa: E402
+    load_manifest,
+    make_processed_entry,
+    primary_project_rel,
+    processed_by_id,
+    save_manifest,
+    upsert_processed,
+)
+from lib.distill_links import enrich_extract, recent_bullet  # noqa: E402
+from lib.memory_config import resolve_memory_home  # noqa: E402
+from lib.project_merge import apply_extract_to_project  # noqa: E402
+from lib.timestamps import now_iso, staging_date_slug  # noqa: E402
+from lib.transcript import find_transcript, workspace_slug  # noqa: E402
+
+DEFAULT_PROJECTS_ROOT = Path.home() / ".cursor/projects"
+
+
+def load_extract(path: Path) -> dict:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def build_staging_markdown(extract: dict, *, project_rel: str) -> str:
+    """Staging file for agent merge — verbatim user messages, no translation."""
+    slug = extract.get("workspace_slug", "unknown")
+    uid = extract.get("uuid", "?")
+    today = now_iso()
+    keywords = ", ".join(extract.get("keywords_hit") or []) or "—"
+    msgs = extract.get("user_messages") or []
+
+    lines = [
+        f"# Distill staging — {slug}",
+        f"_Generated: {today} · uuid: {uid}_",
+        "",
+        f"> Agent merge into `chats/{project_rel}` — preserve language; no secrets.",
+        "> ## Decisions are curated by agent/LLM — do not copy raw bullets verbatim.",
+        "",
+        "## Summary",
+        "",
+        extract.get("first_query", "(no summary)")[:500],
+        "",
+        "## Raw candidates (review — not Decisions)",
+        "",
+    ]
+    for msg in msgs[:8]:
+        snippet = msg.strip()
+        if len(snippet) > 240:
+            snippet = snippet[:237] + "..."
+        if snippet:
+            lines.append(f"- {snippet}")
+
+    lines.extend(
+        [
+            "",
+            "## Open threads (candidates)",
+            "",
+            "- ",
+            "",
+            "## Recent",
+            "",
+            f"- {recent_bullet(extract, today)}",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def run_merge(
+    *,
+    memory_home: Path,
+    chat_id: str,
+    extract: dict,
+    dry_run: bool = False,
+    apply: bool = False,
+    bootstrap_decisions: bool = False,
+    project_override: str | None = None,
+    projects_root: Path = DEFAULT_PROJECTS_ROOT,
+) -> dict:
+    manifest_path = memory_home / "chats" / "manifest.json"
+    manifest = load_manifest(manifest_path)
+
+    extract = enrich_extract(
+        extract,
+        memory_home=memory_home,
+        projects_root=projects_root,
+    )
+
+    slug = extract.get("workspace_slug") or workspace_slug(extract.get("workspace", ""))
+    project_rel = primary_project_rel(
+        manifest,
+        chat_id,
+        workspace_slug=slug,
+        override=project_override,
+    )
+
+    existing = processed_by_id(manifest).get(chat_id)
+    if existing and existing.get("distilled_to"):
+        distilled_to = list(existing["distilled_to"])
+        if project_rel not in distilled_to:
+            distilled_to.insert(0, project_rel)
+    else:
+        distilled_to = [project_rel]
+
+    entry = make_processed_entry(
+        chat_id=chat_id,
+        workspace=extract.get("workspace", "unknown"),
+        transcript_date=extract.get("date", datetime.now().strftime("%Y-%m-%d")),
+        summary=extract.get("first_query", ""),
+        distilled_to=distilled_to,
+        transcript_available=bool(extract.get("transcript_available")),
+    )
+
+    staging_dir = memory_home / "chats" / "merge-staging"
+    staging_path = (
+        staging_dir / f"{slug}-{staging_date_slug(entry['distilled_at'])}-{chat_id[:8]}.md"
+    )
+    staging_md = build_staging_markdown(extract, project_rel=project_rel)
+
+    result = {
+        "chat_id": chat_id,
+        "slug": slug,
+        "project_rel": project_rel,
+        "manifest_path": str(manifest_path),
+        "staging_path": str(staging_path),
+        "project_file": str(memory_home / "chats" / project_rel),
+        "distilled_at": entry["distilled_at"],
+        "inserted": True,
+        "dry_run": dry_run,
+        "applied": False,
+    }
+
+    if dry_run:
+        result["staging_preview_lines"] = len(staging_md.splitlines())
+        if apply:
+            result["apply_preview"] = (
+                f"would update Recent in {result['project_file']} (no Decisions)"
+            )
+        return result
+
+    inserted = upsert_processed(manifest, entry)
+    result["inserted"] = inserted
+    save_manifest(manifest_path, manifest)
+
+    staging_dir.mkdir(parents=True, exist_ok=True)
+    staging_path.write_text(staging_md, encoding="utf-8")
+
+    extracts_dir = memory_home / "chats" / "extracts"
+    extracts_dir.mkdir(parents=True, exist_ok=True)
+    (extracts_dir / f"{chat_id}.json").write_text(
+        json.dumps(extract, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+    if apply:
+        project_path = memory_home / "chats" / project_rel
+        result["applied"] = True
+        result["apply_result"] = apply_extract_to_project(
+            project_path,
+            extract,
+            today=entry["distilled_at"],
+            bootstrap_decisions=bootstrap_decisions,
+        )
+
+    return result
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("uuid", help="Chat transcript uuid")
+    parser.add_argument("--memory-home", help="Hub path override")
+    parser.add_argument("--extract", metavar="JSON", help="Use existing extract JSON")
+    parser.add_argument(
+        "--strategy",
+        default="auto",
+        choices=("tail", "spread", "all", "auto"),
+    )
+    parser.add_argument("--projects-root", metavar="DIR")
+    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--apply",
+        action="store_true",
+        help="Recent≤3; optional [bootstrap] Decisions when empty (use with --bootstrap-decisions)",
+    )
+    parser.add_argument(
+        "--bootstrap-decisions",
+        action="store_true",
+        help="Seed ## Decisions from keyword-tagged user messages when section is empty",
+    )
+    parser.add_argument(
+        "--project",
+        metavar="REL",
+        help="Target project file (e.g. example-app or projects/example-app.md)",
+    )
+    parser.add_argument("-o", "--output", metavar="FILE", help="Write result JSON")
+    args = parser.parse_args()
+
+    memory_home = resolve_memory_home(args.memory_home, script_file=__file__)
+    chat_id = args.uuid.strip()
+
+    if args.extract:
+        extract_path = Path(args.extract).expanduser().resolve()
+        if not extract_path.is_file():
+            print(f"Error: extract not found: {extract_path}", file=sys.stderr)
+            return 1
+        extract = load_extract(extract_path)
+    else:
+        de = load_script_module("distill_extract", "distill-extract.py")
+        projects_root = (
+            Path(args.projects_root).expanduser().resolve()
+            if args.projects_root
+            else DEFAULT_PROJECTS_ROOT
+        )
+        jsonl = find_transcript(
+            chat_id, projects_root, memory_home=memory_home
+        )
+        if jsonl is None:
+            print(f"Error: transcript not found: {chat_id}", file=sys.stderr)
+            return 1
+        extract = de.build_extract(jsonl, projects_root=projects_root, strategy=args.strategy)
+
+    result = run_merge(
+        memory_home=memory_home,
+        chat_id=chat_id,
+        extract=extract,
+        dry_run=args.dry_run,
+        apply=args.apply,
+        bootstrap_decisions=args.bootstrap_decisions,
+        project_override=args.project,
+    )
+
+    out = json.dumps(result, indent=2) + "\n"
+    if args.output:
+        Path(args.output).expanduser().write_text(out, encoding="utf-8")
+    else:
+        sys.stdout.write(out)
+
+    if args.dry_run:
+        print(f"dry-run: would write {result['staging_path']}", file=sys.stderr)
+    else:
+        msg = f"manifest updated; staging: {result['staging_path']}"
+        if result.get("applied"):
+            ar = result.get("apply_result", {})
+            msg += f"; applied → {ar.get('project_file')} (Recent only)"
+        print(msg, file=sys.stderr)
+    return 0
+
+
+def load_script_module(module_name: str, filename: str):
+    import importlib.util
+
+    path = SCRIPT_DIR / filename
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Cannot load {path}")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+if __name__ == "__main__":
+    sys.exit(main())

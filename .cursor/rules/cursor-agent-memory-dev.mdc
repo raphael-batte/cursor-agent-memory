@@ -1,0 +1,36 @@
+---
+description: Dev/install split, clean git clone, sync and test workflow
+alwaysApply: true
+---
+
+# Framework development (this repo)
+
+## Two clones
+
+| Clone | Role |
+|-------|------|
+| **Dev** (this repo) | Edit framework, run tests, push to GitHub — **no `memory/`** |
+| **Install** (`install_root` in `dev.config.json`) | Cursor skills/hooks + `$MEMORY_HOME` |
+
+`dev.config.json` is gitignored. Never commit `memory/` or user data in dev.
+
+## After code changes
+
+```bash
+bash scripts/sync-to-install.sh
+bash tests/run-tests.sh
+```
+
+Relink if `SKILL.md` or hooks changed: `bash scripts/link-cursor-skills.sh --force` from **install** clone.
+
+## Versioning
+
+Behaviour changes require `bash scripts/bump-version.sh` + `CHANGELOG.md` — see [VERSIONING.md](../VERSIONING.md).
+
+## Paths
+
+- `$FRAMEWORK_ROOT` → install clone (Cursor symlink target)
+- `$MEMORY_HOME` → `<install>/memory/`
+- External writes **only** under `~/.cursor/` (hooks, skills, env)
+
+Single entry skill: `@agent-memory`. Distill-first sync — scan, ask user, then run.

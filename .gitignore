@@ -1,0 +1,10 @@
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Never commit user memory data into framework repo
+memory/
+.agent-memory/
+.memory/
+dev.config.json

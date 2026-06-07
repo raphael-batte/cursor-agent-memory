@@ -1,0 +1,11 @@
+{
+  "_comment": "Tracks which Cursor chats are distilled. See agent-memory INSTRUCTIONS.md → Session end",
+  "_schema": {
+    "date": "transcript file mtime — last activity in chat",
+    "distilled_at": "YYYY-MM-DD when distill was merged into projects/*.md",
+    "distilled_to": "array of project files updated",
+    "stale": "re-distill when date > distilled_at"
+  },
+  "processed": [],
+  "pending": []
+}

@@ -1,0 +1,4 @@
+{
+  "_comment": "Copy to dev.config.json (gitignored). install_root = Cursor-connected framework clone.",
+  "install_root": "<path-to-install-clone>"
+}
