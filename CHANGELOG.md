@@ -6,6 +6,14 @@ Data hub (`$MEMORY_HOME`) is **not** versioned with this file.
 
 ## [Unreleased]
 
+### Security
+
+- **Expanded secret detection** in `secrets_guard.py` — added provider-prefixed token patterns: Grafana (`glsa_`, `glc_`, legacy `eyJrIjoi…`), Slack (`xox[baprs]-`, `hooks.slack.com` webhooks), Google (`GOCSPX-` OAuth client secret, `6L…` reCAPTCHA, `AIza…` API key), GitHub fine-grained PAT (`github_pat_`), GitLab (`glpat-`), Stripe (`sk_live_`/`rk_live_`), Twilio (`SK…`), SendGrid (`SG.…`), npm (`npm_`), PyPI (`pypi-`); extended AWS to temp creds (`ASIA`) and private-key block to `DSA`/`PGP`
+- **Fixed redaction miss on URL-encoded / concatenated secrets** — distinctive-prefix patterns no longer require leading/trailing `\b`, so secrets embedded in blobs like `…%22GOCSPX-…%22` are now redacted
+- **Removed `eval` from path handling** — `lib/config.sh`, `migrate-memory.sh`, and `init-project-rules.sh` now expand a leading `~` via a safe `_expand_tilde` helper instead of `eval echo "$path"`, which would execute command substitutions / backticks embedded in `MEMORY_HOME`, `FRAMEWORK_ROOT`, or CLI path arguments
+- **Path-traversal hardening** — slugs, uuids, `--project` overrides, and `manifest.distilled_to` entries are now reduced to a safe single path component (`safe_path_component`) before being interpolated into hub file paths, so a crafted transcript/extract/manifest cannot write or read outside the hub
+- **Ignore `__pycache__`/`*.pyc`** — prevents committing compiled bytecode that embeds test fixture values
+
 ## [0.9.3] - 2026-06-07
 
 ### Fixed

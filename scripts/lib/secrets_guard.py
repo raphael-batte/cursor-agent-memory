@@ -17,23 +17,88 @@ from lib.defaults import ENTROPY_MIN_BITS, ENTROPY_MIN_LENGTH
 SECRET_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     (
         "private_key_block",
-        re.compile(r"-----BEGIN (?:RSA |OPENSSH |EC )?PRIVATE KEY-----", re.I),
+        re.compile(
+            r"-----BEGIN (?:RSA |DSA |OPENSSH |EC |PGP )?PRIVATE KEY(?: BLOCK)?-----",
+            re.I,
+        ),
     ),
     (
         "jwt",
         re.compile(r"eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}"),
     ),
+    # Distinctive multi-char prefixes: no \b anchors so URL-encoded / concatenated
+    # secrets (e.g. ...%22GOCSPX-...%22) are still caught; the char class bounds the match.
     (
         "github_token",
-        re.compile(r"\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}\b"),
+        re.compile(r"(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}"),
+    ),
+    (
+        "github_finegrained_pat",
+        re.compile(r"github_pat_[A-Za-z0-9_]{50,}"),
+    ),
+    (
+        "gitlab_pat",
+        re.compile(r"glpat-[A-Za-z0-9_-]{20,}"),
     ),
     (
         "aws_access_key",
-        re.compile(r"\bAKIA[0-9A-Z]{16}\b"),
+        re.compile(r"\b(?:AKIA|ASIA)[0-9A-Z]{16}\b"),
     ),
     (
         "openai_key",
         re.compile(r"\bsk-[A-Za-z0-9]{20,}\b"),
+    ),
+    (
+        "google_oauth_client_secret",
+        re.compile(r"GOCSPX-[A-Za-z0-9_-]{20,}"),
+    ),
+    (
+        "google_recaptcha_key",
+        re.compile(r"\b6L[A-Za-z0-9_-]{38}\b"),
+    ),
+    (
+        "google_api_key",
+        re.compile(r"AIza[0-9A-Za-z_-]{35}"),
+    ),
+    (
+        "grafana_service_account_token",
+        re.compile(r"glsa_[A-Za-z0-9_-]{30,}"),
+    ),
+    (
+        "grafana_cloud_token",
+        re.compile(r"glc_[A-Za-z0-9+/=_-]{20,}"),
+    ),
+    (
+        "grafana_legacy_api_key",
+        re.compile(r"eyJrIjoi[A-Za-z0-9+/=]{20,}"),
+    ),
+    (
+        "slack_token",
+        re.compile(r"xox[baprs]-[A-Za-z0-9-]{10,}"),
+    ),
+    (
+        "slack_webhook",
+        re.compile(r"https://hooks\.slack\.com/services/[A-Za-z0-9/_-]{20,}"),
+    ),
+    (
+        "stripe_secret_key",
+        re.compile(r"(?:sk|rk)_live_[A-Za-z0-9]{20,}"),
+    ),
+    (
+        "twilio_api_key",
+        re.compile(r"\bSK[0-9a-fA-F]{32}\b"),
+    ),
+    (
+        "sendgrid_key",
+        re.compile(r"SG\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}"),
+    ),
+    (
+        "npm_token",
+        re.compile(r"npm_[A-Za-z0-9]{36}"),
+    ),
+    (
+        "pypi_token",
+        re.compile(r"pypi-AgEI[A-Za-z0-9_-]{20,}"),
     ),
     (
         "bearer_token",

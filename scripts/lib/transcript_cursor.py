@@ -23,11 +23,28 @@ class ParseStats:
     text_blocks: int = 0
 
 
+_UNSAFE_COMPONENT = re.compile(r"[^A-Za-z0-9._-]")
+
+
+def safe_path_component(name: str, *, fallback: str = "unknown") -> str:
+    """Reduce a value to one filesystem-safe path component.
+
+    Drops directory separators and neutralizes traversal (``..``) so slugs,
+    uuids, or overrides derived from transcripts / CLI input cannot escape the
+    hub when interpolated into a file path.
+    """
+    base = str(name).replace("\\", "/").split("/")[-1].strip()
+    cleaned = _UNSAFE_COMPONENT.sub("-", base).strip(".-")
+    return cleaned or fallback
+
+
 def workspace_slug(workspace: str) -> str:
     if "-Work-" in workspace:
-        return workspace.split("-Work-", 1)[-1]
-    parts = workspace.split("-")
-    return parts[-1] if parts else workspace
+        raw = workspace.split("-Work-", 1)[-1]
+    else:
+        parts = workspace.split("-")
+        raw = parts[-1] if parts else workspace
+    return safe_path_component(raw, fallback="unknown")
 
 
 def decode_workspace_folder_to_path(folder: str) -> str | None:

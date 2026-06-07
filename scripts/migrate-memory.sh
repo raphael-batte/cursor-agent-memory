@@ -36,9 +36,11 @@ done
 
 [[ -n "$FROM" ]] || { echo "Error: --from required"; usage; exit 1; }
 
-FROM="$(cd "$(eval echo "$FROM")" && pwd)"
+FROM="$(cd "$(_expand_tilde "$FROM")" && pwd)"
 if [[ -n "$TO" ]]; then
-  TO="$(cd "$(mkdir -p "$(eval echo "$TO")" && eval echo "$TO")" && pwd)"
+  TO="$(_expand_tilde "$TO")"
+  mkdir -p "$TO"
+  TO="$(cd "$TO" && pwd)"
 else
   TO="$(resolve_memory_home "")"
   mkdir -p "$TO"

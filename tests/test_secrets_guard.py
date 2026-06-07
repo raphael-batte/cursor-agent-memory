@@ -65,6 +65,56 @@ class TestSecretsGuard(unittest.TestCase):
             blob = json.dumps(data)
             self.assertNotIn("abc123secretkey", blob)
 
+    def test_provider_token_prefixes_detected(self) -> None:
+        # All values are SYNTHETIC fakes (format-valid, marked EXAMPLE). The token
+        # prefix is split across `+` concatenation so the committed file contains
+        # no contiguous token literal — this avoids GitHub push-protection / secret
+        # scanner false positives while the runtime string still drives the regex.
+        # Never paste a real/captured secret into tests in a public repo.
+        samples = {
+            "google_oauth_client_secret": "GOCSPX" + "-EXAMPLE_fake_client_secret_value",
+            "google_recaptcha_key": "6L" + "eEXAMPLEfakeRecaptchaKey0000000000000x",
+            "google_api_key": "AIza" + "EXAMPLEfakeGoogleApiKey00000000000000",
+            "grafana_service_account_token": "glsa_" + "EXAMPLEfakeServiceAccountToken000000",
+            "grafana_cloud_token": "glc_" + "EXAMPLEfakeGrafanaCloudAccessToken00",
+            "grafana_legacy_api_key": "eyJrIjoi" + "EXAMPLEfakeGrafanaLegacyApiKey00",
+            "slack_token": "xoxb" + "-EXAMPLE-fake-slack-bot-token-000000",
+            "github_finegrained_pat": "github_" + "pat_" + "EXAMPLEfakeFineGrainedPat" + "0" * 40,
+            "gitlab_pat": "glpat" + "-EXAMPLEfakeGitlabPat00",
+            "stripe_secret_key": "sk_" + "live_EXAMPLEfakeStripeSecretKey00",
+            "sendgrid_key": "SG." + "EXAMPLEfakeSendgridIdPart.EXAMPLEfakeSendgridSecretPart",
+            "npm_token": "npm_" + "EXAMPLEfakeNpmAutomationToken0000000",
+            "pypi_token": "pypi-" + "AgEIEXAMPLEfakePypiUploadToken00",
+        }
+        for label, value in samples.items():
+            with self.subTest(label=label):
+                self.assertIn(label, sg.find_secret_labels(value))
+                out, n = sg.redact_secrets(value)
+                self.assertGreater(n, 0)
+                self.assertNotIn(value, out)
+
+    def test_url_encoded_secret_redacted(self) -> None:
+        # Real-world regression: a secret embedded in a URL-encoded blob has a
+        # word char (from %22) immediately before its prefix, so \b anchors miss it.
+        # Value is a SYNTHETIC fake matching the GOCSPX- format (prefix split via
+        # concatenation so no contiguous token literal is committed).
+        secret = "GOCSPX" + "-EXAMPLE_fake_client_secret_value"
+        blob = f"client_secret%22:%22{secret}%22,%22redirect"
+        self.assertIn("google_oauth_client_secret", sg.find_secret_labels(blob))
+        out, _ = sg.redact_secrets(blob)
+        self.assertNotIn(secret, out)
+        self.assertNotIn("GOCSPX" + "-EXAMPLE", out)
+
+    def test_provider_prefixes_no_false_positives(self) -> None:
+        for benign in (
+            "tilt-0123example4567",
+            "describe the function",
+            "skyscraper-image asset",
+            "glsa is a common prefix word",
+        ):
+            with self.subTest(benign=benign):
+                self.assertEqual(sg.find_secret_labels(benign), [])
+
     def test_entropy_strict_finds_token(self) -> None:
         token = "AbcdefGH1234567890klmnopQRSTuv"
         self.assertTrue(sg.find_entropy_secrets(f"value={token}"))

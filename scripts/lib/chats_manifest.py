@@ -3,11 +3,18 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
 from lib.timestamps import now_iso
-from lib.transcript_cursor import decode_workspace_folder_to_path, workspace_slug  # noqa: I001
+from lib.transcript_cursor import (  # noqa: I001
+    decode_workspace_folder_to_path,
+    safe_path_component,
+    workspace_slug,
+)
+
+_PROJECT_REL_RE = re.compile(r"projects/[A-Za-z0-9._-]+\.md")
 
 
 def load_manifest(path: Path) -> dict[str, Any]:
@@ -33,24 +40,22 @@ def primary_project_rel(
     Prefers manifest distilled_to, then --project override, else workspace slug.
     """
     if override:
-        rel = override.strip().lstrip("/")
-        if not rel.startswith("projects/"):
-            rel = f"projects/{rel}"
-        if not rel.endswith(".md"):
-            rel = f"{rel}.md"
-        return rel
+        raw = override.strip().lstrip("/")
+        if raw.startswith("projects/"):
+            raw = raw[len("projects/") :]
+        if raw.endswith(".md"):
+            raw = raw[: -len(".md")]
+        return f"projects/{safe_path_component(raw, fallback='project')}.md"
 
     entry = processed_by_id(manifest).get(chat_id)
     if entry:
         for rel in entry.get("distilled_to") or []:
-            if (
-                isinstance(rel, str)
-                and rel.startswith("projects/")
-                and rel.endswith(".md")
-            ):
+            # Only trust entries that are exactly projects/<safe-name>.md — a
+            # crafted manifest must not redirect writes outside the hub.
+            if isinstance(rel, str) and _PROJECT_REL_RE.fullmatch(rel):
                 return rel
 
-    return f"projects/{workspace_slug}.md"
+    return f"projects/{safe_path_component(workspace_slug, fallback='unknown')}.md"
 
 
 def processed_by_id(manifest: dict[str, Any]) -> dict[str, dict[str, Any]]:

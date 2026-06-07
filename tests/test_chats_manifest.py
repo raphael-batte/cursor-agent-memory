@@ -40,6 +40,30 @@ class TestChatsManifest(unittest.TestCase):
         rel = cm.primary_project_rel({}, "new", workspace_slug="example-app", override="custom-site")
         self.assertEqual(rel, "projects/custom-site.md")
 
+    def test_primary_project_rel_override_no_traversal(self) -> None:
+        for override in (
+            "../../../../etc/cron.d/evil",
+            "/etc/passwd",
+            "projects/../../secret",
+            "..",
+        ):
+            rel = cm.primary_project_rel({}, "n", workspace_slug="app", override=override)
+            self.assertRegex(rel, r"^projects/[A-Za-z0-9._-]+\.md$")
+            self.assertNotIn("..", rel)
+            self.assertNotIn("/etc/", rel)
+
+    def test_primary_project_rel_rejects_crafted_manifest_entry(self) -> None:
+        manifest = {
+            "processed": [{"id": "x", "distilled_to": ["projects/../../../tmp/evil.md"]}]
+        }
+        rel = cm.primary_project_rel(manifest, "x", workspace_slug="safe-app")
+        self.assertEqual(rel, "projects/safe-app.md")
+
+    def test_primary_project_rel_slug_fallback_sanitized(self) -> None:
+        rel = cm.primary_project_rel({}, "x", workspace_slug="../../escape")
+        self.assertRegex(rel, r"^projects/[A-Za-z0-9._-]+\.md$")
+        self.assertNotIn("..", rel)
+
     def test_count_chats(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "manifest.json"

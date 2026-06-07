@@ -28,6 +28,22 @@ class TestTranscriptCursor(unittest.TestCase):
         with self.assertRaises(tc.TranscriptSchemaError):
             tc.extract_raw_user_texts(BAD)
 
+    def test_safe_path_component_neutralizes_traversal(self) -> None:
+        self.assertEqual(tc.safe_path_component("..", fallback="x"), "x")
+        self.assertEqual(tc.safe_path_component("../../etc/passwd"), "passwd")
+        self.assertEqual(tc.safe_path_component("a/b/c"), "c")
+        injected = tc.safe_path_component("foo$(touch evil)bar")
+        self.assertNotRegex(injected, r"[^A-Za-z0-9._-]")
+        self.assertEqual(tc.safe_path_component(""), "unknown")
+        # legitimate slugs pass through unchanged
+        self.assertEqual(tc.safe_path_component("irm-vision-demo"), "irm-vision-demo")
+
+    def test_workspace_slug_is_safe(self) -> None:
+        self.assertEqual(tc.workspace_slug("Users-me-Work-irm"), "irm")
+        slug = tc.workspace_slug("Users-me-Work-../../../etc/cron")
+        self.assertNotIn("/", slug)
+        self.assertNotIn("..", slug)
+
     def test_redacted_only_raises(self) -> None:
         with self.assertRaises(tc.TranscriptSchemaError):
             tc.extract_raw_user_texts(RED_ONLY)

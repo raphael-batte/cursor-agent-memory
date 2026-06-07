@@ -27,6 +27,7 @@ from lib.memory_config import resolve_memory_home  # noqa: E402
 from lib.project_merge import apply_extract_to_project  # noqa: E402
 from lib.timestamps import now_iso, staging_date_slug  # noqa: E402
 from lib.transcript import find_transcript, workspace_slug  # noqa: E402
+from lib.transcript_cursor import safe_path_component  # noqa: E402
 
 DEFAULT_PROJECTS_ROOT = Path.home() / ".cursor/projects"
 
@@ -102,7 +103,11 @@ def run_merge(
         projects_root=projects_root,
     )
 
-    slug = extract.get("workspace_slug") or workspace_slug(extract.get("workspace", ""))
+    slug = safe_path_component(
+        extract.get("workspace_slug") or workspace_slug(extract.get("workspace", "")),
+        fallback="unknown",
+    )
+    safe_id = safe_path_component(chat_id, fallback="chat")
     project_rel = primary_project_rel(
         manifest,
         chat_id,
@@ -129,7 +134,7 @@ def run_merge(
 
     staging_dir = memory_home / "chats" / "merge-staging"
     staging_path = (
-        staging_dir / f"{slug}-{staging_date_slug(entry['distilled_at'])}-{chat_id[:8]}.md"
+        staging_dir / f"{slug}-{staging_date_slug(entry['distilled_at'])}-{safe_id[:8]}.md"
     )
     staging_md = build_staging_markdown(extract, project_rel=project_rel)
 
@@ -178,7 +183,7 @@ def run_merge(
 
     extracts_dir = memory_home / "chats" / "extracts"
     extracts_dir.mkdir(parents=True, exist_ok=True)
-    (extracts_dir / f"{chat_id}.json").write_text(
+    (extracts_dir / f"{safe_id}.json").write_text(
         json.dumps(extract, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )

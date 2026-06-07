@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from lib import transcript_cursor as cursor
@@ -31,7 +32,9 @@ def find_transcript(
     if path is not None:
         return path
 
-    if memory_home is not None:
+    # Hub fallback builds a path from the uuid — only allow a bare safe id so a
+    # crafted uuid (e.g. "../../etc/x") cannot read files outside transcripts/.
+    if memory_home is not None and re.fullmatch(r"[A-Za-z0-9._-]+", needle):
         hub = memory_home.expanduser().resolve()
         for candidate in (
             hub / "transcripts" / f"{needle}.jsonl",

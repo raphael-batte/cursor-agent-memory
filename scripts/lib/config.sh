@@ -5,6 +5,17 @@
 HUB_DIRNAME="memory"
 DEV_CONFIG_NAME="dev.config.json"
 
+# Safe leading-tilde expansion. Replaces `eval echo "$p"`, which would execute
+# command substitutions / backticks embedded in a path value.
+_expand_tilde() {
+  local p="$1"
+  case "$p" in
+    "~") printf '%s\n' "$HOME" ;;
+    "~/"*) printf '%s\n' "$HOME/${p#"~/"}" ;;
+    *) printf '%s\n' "$p" ;;
+  esac
+}
+
 _read_install_from_dev_config() {
   local dev_root="$1"
   local cfg="$dev_root/$DEV_CONFIG_NAME"
@@ -18,15 +29,17 @@ PY
 }
 
 _valid_framework_dir() {
-  local path="$1"
-  [[ -n "$path" && -f "$(eval echo "$path")/INSTRUCTIONS.md" ]] || return 1
-  echo "$(cd "$(eval echo "$path")" && pwd)"
+  local path
+  path="$(_expand_tilde "$1")"
+  [[ -n "$path" && -f "$path/INSTRUCTIONS.md" ]] || return 1
+  echo "$(cd "$path" && pwd)"
 }
 
 _valid_install_dir() {
-  local path="$1"
-  [[ -n "$path" && -d "$(eval echo "$path")" ]] || return 1
-  echo "$(cd "$(eval echo "$path")" && pwd)"
+  local path
+  path="$(_expand_tilde "$1")"
+  [[ -n "$path" && -d "$path" ]] || return 1
+  echo "$(cd "$path" && pwd)"
 }
 
 resolve_install_root() {
@@ -62,11 +75,11 @@ resolve_memory_home() {
   local override="${1:-}"
   local install_root="${2:-}"
   if [[ -n "$override" ]]; then
-    echo "$(cd "$(eval echo "$override")" && pwd)"
+    echo "$(cd "$(_expand_tilde "$override")" && pwd)"
     return
   fi
   if [[ -n "${MEMORY_HOME:-}" ]]; then
-    echo "$(cd "$(eval echo "$MEMORY_HOME")" && pwd)"
+    echo "$(cd "$(_expand_tilde "$MEMORY_HOME")" && pwd)"
     return
   fi
   if [[ -z "$install_root" ]]; then
@@ -93,7 +106,7 @@ resolve_framework_root() {
   local override="${2:-}"
   local install_root="${3:-}"
   if [[ -n "$override" ]]; then
-    echo "$(cd "$(eval echo "$override")" && pwd)"
+    echo "$(cd "$(_expand_tilde "$override")" && pwd)"
     return
   fi
   if [[ -z "$install_root" ]]; then
@@ -104,7 +117,7 @@ resolve_framework_root() {
     return
   fi
   if [[ -n "${FRAMEWORK_ROOT:-}" ]]; then
-    echo "$(cd "$(eval echo "$FRAMEWORK_ROOT")" && pwd)"
+    echo "$(cd "$(_expand_tilde "$FRAMEWORK_ROOT")" && pwd)"
     return
   fi
   if [[ -f "${REPO_ROOT:-}/INSTRUCTIONS.md" ]]; then
