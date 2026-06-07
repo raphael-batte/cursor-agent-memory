@@ -1,0 +1,33 @@
+---
+description: Agent memory — route layers per task (agent-memory framework)
+alwaysApply: false
+---
+
+# Context & handoff
+
+**Framework:** `$FRAMEWORK_ROOT/INSTRUCTIONS.md` · **Data:** `$MEMORY_HOME` (`<install>/memory/`)
+
+## When to read what
+
+| Question | Skill | File |
+|----------|-------|------|
+| Who am I / my projects | `global-context` | `$MEMORY_HOME/context/GLOBAL_CONTEXT.md` |
+| Where we stopped | `agent-handoff` | `<repo>/AGENT_HANDOFF.md` |
+| What we discussed before | `chat-memory` | `$MEMORY_HOME/chats/projects/<slug>.md` |
+| What worked / failed | `feedback-memory` | `$MEMORY_HOME/feedback/` + `preferences.md` |
+
+**Do not load all layers every session.** Flow E (proposing) → feedback first.
+
+## Session start (default)
+
+1. If `<repo>/AGENT_HANDOFF.md` exists → read it first (Flow A in INSTRUCTIONS.md)
+2. Add `global-context` only if project unclear or conventions/infra needed
+3. Add `chat-memory` only if user needs past decisions
+
+## Session end
+
+1. Read `~/.cursor/hooks/agent-memory-session.log` if present (see `agent-memory-session-end.mdc`)
+2. Update handoff · conventions · **semantic-merge** staging → Decisions
+3. `verify-memory.py` · optional `distill-merge --apply` (Recent only)
+
+Skills: `bash "$FRAMEWORK_ROOT/scripts/link-cursor-skills.sh"`

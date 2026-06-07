@@ -1,0 +1,6 @@
+{
+  "_comment": "Lives at <clone>/memory/config.json (gitignored). Paths set on init/link/sync.",
+  "framework_root": "",
+  "memory_home": "",
+  "handoff_mode": "optional"
+}
