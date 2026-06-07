@@ -5,6 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 REPO="raphael-batte/cursor-agent-memory"
+GITHUB_DESCRIPTION='Persistent working memory for Cursor. Routed layers, private hub, one @agent-memory skill, auto-distill on session boundaries, ## Next step forward pointer + transcript drill-down. MIT.'
 VERSION="$(tr -d '[:space:]' < "$REPO_ROOT/VERSION")"
 
 cd "$REPO_ROOT"
@@ -28,9 +29,11 @@ else
     --public \
     --source=. \
     --remote=origin \
-    --description "Routed multi-layer memory for Cursor — one skill, private hub, auto distill, ## Next step pointer + drill-down. MIT." \
+    --description "$GITHUB_DESCRIPTION" \
     --push
 fi
+
+gh repo edit "$REPO" --description "$GITHUB_DESCRIPTION"
 
 if git rev-parse "v${VERSION}" &>/dev/null; then
   git push origin "v${VERSION}" || git push origin "v${VERSION}" --force
