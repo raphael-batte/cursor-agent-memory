@@ -1,6 +1,6 @@
 # Cursor Agent Memory
 
-**Version:** 0.9.0 — see [VERSIONING.md](VERSIONING.md) · CI on push/PR · Release on tag ([workflows](.github/workflows/))
+**Version:** 0.9.1 — see [VERSIONING.md](VERSIONING.md) · CI on push/PR · Release on tag ([workflows](.github/workflows/))
 Created by [raphaelbatte](https://github.com/raphael-batte) · [raphbatte.com](https://raphbatte.com)
 
 ## What this is
@@ -9,9 +9,9 @@ Created by [raphaelbatte](https://github.com/raphael-batte) · [raphbatte.com](h
 
 - **Global context** — who you are, which projects, cross-repo rules, infra
 - **Feedback** — what worked (+) and what to stop proposing (−)
-- **Chat memory** — distilled transcripts + **`## Next step`** forward pointer (auto on hooks)
+- **Chat memory** — distilled transcripts + **`## Next step`** forward pointer (auto on hooks; explicit placeholder + chat drill link when none)
 
-Agents load **one layer per task** (INDEX-first), not everything every time. Scripts extract chats without raw jsonl, verify hub integrity, and remind you at session end.
+Agents load **one layer per task** (INDEX-first), not everything every time. Weak pointer → drill transcript tail via `[title](uuid)` in distill (never bulk jsonl). Scripts verify hub integrity; hooks refresh on session boundaries.
 
 **Clean dev repo + install clone** — edit framework in a GitHub-clean clone; Cursor and your private hub live in the install clone (`<install>/memory/`, gitignored). MIT license.
 
@@ -26,15 +26,22 @@ flowchart TB
   subgraph hub ["$MEMORY_HOME (private hub)"]
     GC[GLOBAL_CONTEXT + conventions + infra]
     FB[feedback wins/fails + preferences]
-    CH[chats/projects + manifest]
+    CH["chats/projects/slug.md\n## Next step · Recent · Decisions"]
+    MF[manifest.json]
   end
   TR[Cursor transcripts jsonl read-only]
+  AG[Agent session start]
 
-  TR -->|distill + forward_pointer| CH
+  TR -->|boundary distill apply| CH
+  TR -->|track distilled_at| MF
+  CH -->|pointer or placeholder + uuid link| AG
+  AG -->|_No forward pointer_ or ?| TR
   GC -->|route by task| FB
   GC -->|route by task| CH
   FB -->|before proposing plans| CH
 ```
+
+**Drill-down:** `## Next step` → `[title](uuid)` in same file → transcript tail (~10–20 turns). Placeholders: `_No forward pointer._` or `[?] _Not refreshed._`.
 
 | Layer | Answers | Location |
 |-------|---------|----------|
@@ -59,9 +66,9 @@ flowchart TB
 | **Scripts** | distill, `sync-memory`, verify, doctor, hooks installer |
 | **Templates** | Empty hub scaffolds: context, feedback, chats, Cursor hooks |
 | **CI** | Tests on push/PR; pinned gitleaks; GitHub Release on `v*` tag |
-| **Tests** | 100+ unit/shell checks including sync, distill links, routing, secrets |
+| **Tests** | 130+ unit/shell checks including sync, forward pointer, placeholders, routing, secrets |
 
-Distill flow in one line: `distill-merge.py <uuid>` → review `merge-staging/` → **semantic-merge** skill → optional `--apply` (Recent only).
+Distill flow: `distill-merge.py <uuid>` → review `merge-staging/` → **semantic-merge** skill for Decisions → hooks/sync `--apply` (Recent + **## Next step**).
 
 ## Quick start
 
@@ -99,7 +106,7 @@ Scripts resolve paths: CLI flag → env → config → default. No `export` ever
 
 **Never** store secrets in `$MEMORY_HOME`. Distill redacts known patterns; `verify-memory.py` scans the hub.
 
-Sync bootstraps Projects in GLOBAL_CONTEXT from distills. Hooks keep `chats/projects/<slug>.md` **## Next step** fresh from transcript tails.
+Sync bootstraps Projects in GLOBAL_CONTEXT from distills. Hooks keep **## Next step** fresh (heuristic pointer or explicit placeholder with drill link).
 
 ## Migration, skills, status
 

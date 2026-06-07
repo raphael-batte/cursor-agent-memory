@@ -28,7 +28,7 @@ else
     --public \
     --source=. \
     --remote=origin \
-    --description "Routed multi-layer memory for Cursor agents — one skill, private hub, auto distill + forward pointer. MIT." \
+    --description "Routed multi-layer memory for Cursor — one skill, private hub, auto distill, ## Next step pointer + drill-down. MIT." \
     --push
 fi
 

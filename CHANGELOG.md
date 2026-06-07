@@ -6,6 +6,10 @@ Data hub (`$MEMORY_HOME`) is **not** versioned with this file.
 
 ## [Unreleased]
 
+### Changed
+
+- README / ARCHITECTURE mermaid + routing docs; GitHub repo description (no handoff)
+
 ## [0.9.1] - 2026-06-07
 
 ### Added

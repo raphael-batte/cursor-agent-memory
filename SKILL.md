@@ -8,7 +8,7 @@ description: >
 
 # Agent Memory
 
-**Version:** 0.9.0 — see [VERSIONING.md](VERSIONING.md)
+**Version:** 0.9.1 — see [VERSIONING.md](VERSIONING.md)
 
 **Full protocol:** [INSTRUCTIONS.md](INSTRUCTIONS.md) · **Overview:** [ARCHITECTURE.md](ARCHITECTURE.md)
 

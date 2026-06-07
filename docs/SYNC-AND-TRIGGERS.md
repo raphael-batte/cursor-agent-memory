@@ -43,7 +43,7 @@ CLI: `--scan-only`, `--dry-run`, `--no-hooks`, `--days`, `--limit`.
 
 ## Forward pointer
 
-`lib/forward_pointer.py` — heuristics on transcript tail (assistant text, then user). Written to `## Next step` in `apply_extract_to_project()`.
+`lib/forward_pointer.py` — heuristics on transcript tail (raw user commitment first, then assistant patterns). `apply_extract_to_project()` always writes `## Next step`: extracted pointer, or `_No forward pointer._` / `[?] _Not refreshed._` with drill link `[title](uuid)` to source chat. Agent drills transcript tail when placeholders appear (see INSTRUCTIONS routing).
 
 ## Modules
 

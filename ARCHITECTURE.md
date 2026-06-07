@@ -48,8 +48,9 @@ Each layer answers a different question. **Do not load all layers every session.
 ## Routing (session start)
 
 ```
-Continue known repo     → chats/projects/<slug>.md → ## Next step
-Past decisions / why    → distill ## Decisions; chat link [title](uuid) if needed
+Continue known repo     → chats/projects/<slug>.md → ## Next step first
+No pointer / [?]        → mandatory drill: [title](uuid) in Next step → transcript tail
+Past decisions / why    → distill ## Decisions; chat link if still thin
 New or unknown project  → GLOBAL_CONTEXT.md → Projects table
 Deploy / CI / git task  → conventions.md
 Proposing architecture  → fails + wins + preferences (Flow E)
@@ -68,7 +69,7 @@ transcript jsonl
     → distill-extract.py     structured JSON (~10–50 KB)
     → distill-merge.py       manifest + merge-staging/*.md
     → semantic-merge skill   agent curates ## Decisions
-    → apply on hooks/sync     Recent ≤3 + ## Next step (forward_pointer.py)
+    → apply on hooks/sync     Recent ≤3 + ## Next step (pointer or placeholder + drill link)
     → verify-memory.py       integrity + secrets scan
 ```
 
