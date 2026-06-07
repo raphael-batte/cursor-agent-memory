@@ -22,6 +22,7 @@ from lib.defaults import (  # noqa: E402
     MAX_DISTILL_MESSAGES,
 )
 from lib.message_importance import mechanical_bullets  # noqa: E402
+from lib.topic_segmentation import segment_messages  # noqa: E402
 from lib.token_budget import select_by_importance, window_messages  # noqa: E402
 from lib.secrets_guard import is_terminal_noise, sanitize_message  # noqa: E402
 from lib.transcript import (  # noqa: E402
@@ -178,6 +179,7 @@ def build_extract(
     window_summaries = (
         build_window_summaries(all_msgs) if total >= MAP_REDUCE_THRESHOLD else []
     )
+    topic_segments = segment_messages(all_msgs) if total >= 20 else []
 
     incremental: dict | None = None
     if memory_home is not None:
@@ -207,6 +209,7 @@ def build_extract(
         "transcript_adapter": adapter,
         "assistant_snippets": assistant_snippets,
         "window_summaries": window_summaries,
+        "topic_segments": topic_segments,
     }
     if incremental:
         payload["incremental"] = incremental

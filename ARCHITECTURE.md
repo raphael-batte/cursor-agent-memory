@@ -75,7 +75,10 @@ transcript jsonl
 
 - **Staging** holds raw candidates for human/agent review.
 - **`--apply`** does not write raw user bullets into Decisions or Summary (v0.5+).
-- **manifest.json** tracks `distilled_at` for re-distill when a thread continues.
+- **manifest.json** tracks `distilled_at` + watermark (`watermark_user_count`, `watermark_tail_hash`) for content-aware re-distill.
+- **Long chats** — importance-weighted sampling, token budget, mechanical map-reduce windows in staging; agent reduces via semantic-merge skill.
+- **Pointer** — regex in hooks; agent curates via `pointer-curate-prompt.md` when confidence low.
+- **Health** — `memory-health.py` + weekly baseline; not just structure/secrets verify.
 
 Details: [INSTRUCTIONS.md → Chat memory](INSTRUCTIONS.md#chat-memory-chats) · [MIGRATION.md](MIGRATION.md).
 

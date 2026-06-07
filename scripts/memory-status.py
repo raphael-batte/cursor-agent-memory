@@ -241,9 +241,12 @@ def verify_summary(memory_home: Path) -> tuple[int, int] | None:
 
 def metrics_health(memory_home: Path) -> dict | None:
     try:
+        from lib.distill_metrics import read_metrics
+
         mh = load_script_module("memory_health", "memory-health.py")
-        rows = mh.read_metrics(memory_home)
-        return mh.analyze_metrics(rows, days=7)
+        rows = read_metrics(memory_home)
+        data = mh.analyze_metrics(rows, days=7)
+        return mh.enrich_with_baseline(memory_home, data, update_baseline=False)
     except Exception:
         return None
 
@@ -374,6 +377,12 @@ def print_dashboard(data: dict) -> None:
             f"{mh.get('errors', 0)} errors"
         )
         print(f"  Pointer extracted: {rate_s} · avg {mh.get('avg_distill_ms') or '—'} ms")
+        deg = mh.get("degradation") or {}
+        if deg.get("degraded"):
+            print(f"  ⚠ {deg.get('degradation_reason')}")
+        bl = mh.get("baseline") or {}
+        if bl.get("median_hit_rate") is not None:
+            print(f"  Baseline median: {float(bl['median_hit_rate']) * 100:.0f}%")
         print()
 
 

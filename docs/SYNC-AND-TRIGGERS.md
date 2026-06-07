@@ -43,7 +43,13 @@ CLI: `--scan-only`, `--dry-run`, `--no-hooks`, `--days`, `--limit`.
 
 ## Forward pointer
 
-`lib/forward_pointer.py` — heuristics on transcript tail (raw user commitment first, then assistant patterns). `apply_extract_to_project()` always writes `## Next step`: extracted pointer, or `_No forward pointer._` / `[?] _Not refreshed._` with drill link `[title](uuid)` to source chat. Agent drills transcript tail when placeholders appear (see INSTRUCTIONS routing).
+`lib/forward_pointer.py` — heuristics on transcript tail with **confidence** tier. Hooks write `## Next step` mechanically; on placeholder or low confidence, `sessionEnd` emits `user_message` pointing to `pointer-curate-prompt.md` for **agent curation** (regex = fallback only).
+
+## Distill freshness (v0.10+)
+
+- **Watermark** — `manifest.json` stores `watermark_user_count` + `watermark_tail_hash`; redistill when ≥2 new user messages or tail changes (not mtime alone).
+- **Debounce** — same chat within 30s on `preCompact`/`sessionEnd` → one distill.
+- **Metrics** — `logs/agent-memory-metrics.jsonl`; `memory-health.py` tracks pointer hit-rate vs rolling baseline in `logs/health-baseline.json`.
 
 ## Modules
 

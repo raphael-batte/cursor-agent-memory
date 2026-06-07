@@ -172,6 +172,11 @@ def distill_jsonl(
             "status": "distilled",
             "chat_id": chat_id,
             "duration_ms": duration_ms,
+            "user_message_count": extract.get("user_message_count"),
+            "messages_used": len(extract.get("user_messages") or []),
+            "strategy": extract.get("strategy"),
+            "truncated": bool(extract.get("truncated")),
+            "secrets_redacted": int(extract.get("secrets_redacted") or 0),
             "pointer_kind": apply_result.get("next_step_kind"),
             "pointer_confidence": apply_result.get("pointer_confidence"),
             "pointer_source": apply_result.get("pointer_source"),
@@ -358,13 +363,13 @@ def _session_end_user_message(distill: dict[str, Any]) -> str | None:
     project_rel = distill.get("project_rel", "chats/projects/<slug>.md")
     if kind in ("placeholder_empty", "placeholder_stale"):
         return (
-            f"[agent-memory] Review ## Next step in {project_rel} — "
-            "refine from merge-staging if [?]."
+            f"[agent-memory] Curate ## Next step in {project_rel} — "
+            "use templates/chats/pointer-curate-prompt.md + latest merge-staging."
         )
     if conf < POINTER_LOW_CONFIDENCE:
         return (
             f"[agent-memory] Low-confidence pointer ({conf:.2f}) in {project_rel} — "
-            "curate ## Next step from staging tail."
+            "curate ## Next step (pointer-curate-prompt.md)."
         )
     return None
 

@@ -6,6 +6,21 @@ Data hub (`$MEMORY_HOME`) is **not** versioned with this file.
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-06-07
+
+### Added
+
+- **Health baseline** — `logs/health-baseline.json` rolling median pointer hit-rate; `memory-health.py --update-baseline --strict --notify` detects degradation vs personal norm
+- **Agent pointer protocol** — `templates/chats/pointer-curate-prompt.md`; sessionEnd `user_message` + session-end rule point agents to curate `## Next step`
+- **semantic-merge skill** — `skills/semantic-merge/SKILL.md` (was referenced but missing); map-reduce reduce step in semantic-merge prompt
+- **Topic segments** — `topic_segmentation.py` for multi-task chats in extract/staging
+
+### Changed
+
+- **Metrics JSONL** — richer fields: `user_message_count`, `messages_used`, `strategy`, `truncated`, `secrets_redacted`
+- **weekly-verify.sh** — health check with baseline update + macOS notification on degradation
+- **ARCHITECTURE.md** / **SYNC-AND-TRIGGERS.md** — document v0.10 watermark, health, agent pointer model
+
 ## [0.10.0] - 2026-06-07
 
 ### Added

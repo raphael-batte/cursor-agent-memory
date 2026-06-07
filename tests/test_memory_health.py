@@ -45,9 +45,11 @@ class TestMemoryHealth(unittest.TestCase):
             mh = _load_memory_health()
             rows = read_metrics(hub)
             data = mh.analyze_metrics(rows, days=7)
+            data = mh.enrich_with_baseline(hub, data, update_baseline=True)
             self.assertEqual(data["distilled"], 1)
             self.assertEqual(data["debounced"], 1)
             self.assertEqual(data["pointer_extracted_rate"], 1.0)
+            self.assertEqual(data["baseline"]["samples"], 1)
 
 
 if __name__ == "__main__":

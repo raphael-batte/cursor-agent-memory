@@ -73,6 +73,15 @@ def build_staging_markdown(extract: dict, *, project_rel: str) -> str:
         for bullet in rolling[:8]:
             lines.append(f"- {bullet}")
 
+    segments = extract.get("topic_segments") or []
+    if segments:
+        lines.extend(["", "## Topic segments", ""])
+        for seg in segments[:5]:
+            if isinstance(seg, dict):
+                lines.append(
+                    f"- s{seg.get('segment', '?')}: {seg.get('count', 0)} msgs — {seg.get('preview', '')}"
+                )
+
     windows = extract.get("window_summaries") or []
     if windows:
         lines.extend(["", "## Window summaries (map-reduce)", ""])

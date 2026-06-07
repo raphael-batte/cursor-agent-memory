@@ -65,6 +65,7 @@ chmod +x "$ROOT/scripts/weekly-verify.sh"
 weekly_out="$(bash "$ROOT/scripts/weekly-verify.sh" --dry-run 2>&1)"
 echo "$weekly_out" | grep -q "would run memory-doctor"
 echo "$weekly_out" | grep -q "memory-health"
+echo "$weekly_out" | grep -q "update-baseline"
 test -x "$ROOT/scripts/weekly-verify.sh"
 
 # sync-to-install dry-run (dev + install layout)
