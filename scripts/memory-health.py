@@ -81,6 +81,32 @@ def analyze_metrics(
 
     truncation_rate = truncated / len(distilled) if distilled else None
     error_rate = len(errors) / len(recent) if recent else None
+    crashes = [r for r in recent if r.get("status") == "crash"]
+
+    session_starts = sum(
+        1
+        for r in recent
+        if r.get("event") == "sessionStart"
+        and r.get("status") in ("started", "catchup")
+    )
+    boundary_events = sum(
+        1
+        for r in recent
+        if r.get("event") in ("preCompact", "sessionEnd")
+        and r.get("status") in ("received", "distilled", "skipped", "error")
+    )
+    metrics_gap = False
+    metrics_gap_reason = None
+    if session_starts >= 3 and boundary_events == 0 and not crashes:
+        metrics_gap = True
+        metrics_gap_reason = (
+            f"{session_starts} sessionStart events but 0 boundary hook telemetry"
+        )
+    elif session_starts >= 5 and boundary_events < max(1, session_starts // 3):
+        metrics_gap = True
+        metrics_gap_reason = (
+            f"boundary telemetry sparse ({boundary_events} vs {session_starts} sessions)"
+        )
 
     return {
         "window_days": days,
@@ -100,7 +126,16 @@ def analyze_metrics(
         "p95_distill_ms": p95_ms,
         "incremental_distills": incremental,
         "map_reduce_distills": map_reduce,
-        "healthy": len(errors) == 0 and (pointer_rate is None or pointer_rate >= 0.4),
+        "crashes": len(crashes),
+        "session_starts": session_starts,
+        "boundary_events": boundary_events,
+        "metrics_gap": metrics_gap,
+        "metrics_gap_reason": metrics_gap_reason,
+        "healthy": (
+            len(errors) == 0
+            and not metrics_gap
+            and (pointer_rate is None or pointer_rate >= 0.4)
+        ),
     }
 
 
@@ -158,6 +193,10 @@ def print_report(data: dict) -> None:
     deg = data.get("degradation") or {}
     if deg.get("degraded"):
         print(f"  Degradation:    {deg.get('degradation_reason')}")
+    if data.get("metrics_gap"):
+        print(f"  Metrics gap:    {data.get('metrics_gap_reason')}")
+    if data.get("crashes"):
+        print(f"  Crashes:        {data['crashes']}")
     print(f"  Low-confidence: {data['pointer_low_confidence']}")
     tr = data.get("truncation_rate")
     if tr is not None:

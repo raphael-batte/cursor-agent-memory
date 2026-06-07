@@ -14,10 +14,16 @@ SCRIPT_DIR = Path(__file__).resolve().parents[1]
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
+from lib.boundary_crash import report_exception  # noqa: E402
 from lib.boundary_debounce import record_boundary_distill, should_skip_debounce  # noqa: E402
 from lib.chats_manifest import load_manifest, processed_by_id  # noqa: E402
 from lib.defaults import POINTER_LOW_CONFIDENCE  # noqa: E402
 from lib.distill_metrics import append_metric  # noqa: E402
+from lib.pointer_curation_queue import (  # noqa: E402
+    enqueue as enqueue_pointer,
+    needs_enqueue,
+    session_start_user_message,
+)
 from lib.memory_config import resolve_memory_home  # noqa: E402
 from lib.pending_chats import (  # noqa: E402
     list_chats_needing_distill,
@@ -347,11 +353,27 @@ def handle_session_start(
     memory_home: Path,
     projects_root: Path = DEFAULT_PROJECTS_ROOT,
 ) -> dict[str, Any]:
-    """sessionStart — catch-up distill only (no handoff inject)."""
+    """sessionStart — catch-up distill + pointer queue reminder."""
+    _record_metric(
+        memory_home,
+        {
+            "event": "sessionStart",
+            "status": "started",
+            "workspace_slugs": sorted(
+                slugs_from_workspace_roots(payload.get("workspace_roots") or [])
+            ),
+        },
+    )
     catchup = run_session_start_catchup(
         payload, memory_home=memory_home, projects_root=projects_root
     )
-    return {"catchup": catchup}
+    result: dict[str, Any] = {"catchup": catchup}
+    msg = session_start_user_message(
+        memory_home, payload.get("workspace_roots") or []
+    )
+    if msg:
+        result["user_message"] = msg
+    return result
 
 
 def _session_end_user_message(distill: dict[str, Any]) -> str | None:
@@ -390,10 +412,34 @@ def handle_boundary(
         result["status"] = "ignored"
         return result
 
+    chat_id = chat_id_from_payload(payload)
+    _record_metric(
+        memory_home,
+        {
+            "event": event,
+            "status": "received",
+            "chat_id": chat_id,
+        },
+    )
+
     distill = run_boundary_distill(
         payload, memory_home=memory_home, projects_root=projects_root
     )
     result["distill"] = distill
+
+    if event == "sessionEnd" and distill.get("status") == "distilled":
+        apply_result = distill.get("apply_result") or {}
+        should_queue, reason = needs_enqueue(apply_result)
+        if should_queue:
+            enqueue_pointer(
+                memory_home,
+                chat_id=distill.get("chat_id") or chat_id or "unknown",
+                project_rel=str(distill.get("project_rel") or "chats/projects/unknown.md"),
+                reason=reason,
+                workspace_slug=str(distill.get("slug") or ""),
+                staging_path=str(distill.get("staging_path") or ""),
+                pointer_confidence=apply_result.get("pointer_confidence"),
+            )
 
     if event == "preCompact":
         msg = "[agent-memory] Context compacting — review merge-staging and latest distills."
@@ -473,8 +519,22 @@ def main(argv: list[str] | None = None) -> int:
         if args.projects_root
         else None
     )
-    hub = Path(args.memory_home).expanduser() if args.memory_home else None
-    result = dispatch(args.mode, payload, memory_home=hub, projects_root=proot)
+    hub = (
+        resolve_memory_home(str(args.memory_home), script_file=str(SCRIPT_DIR / "boundary-hooks.py"))
+        if args.memory_home
+        else resolve_memory_home(None, script_file=str(SCRIPT_DIR / "boundary-hooks.py"))
+    )
+    try:
+        result = dispatch(args.mode, payload, memory_home=hub, projects_root=proot)
+    except Exception as exc:
+        report_exception(
+            hub,
+            mode=args.mode,
+            event=str(payload.get("hook_event_name") or args.mode),
+            exc=exc,
+        )
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
     out = json.dumps(result, indent=2, ensure_ascii=False) + "\n"
     if args.output:
         Path(args.output).expanduser().write_text(out, encoding="utf-8")

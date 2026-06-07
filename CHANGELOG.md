@@ -6,6 +6,20 @@ Data hub (`$MEMORY_HOME`) is **not** versioned with this file.
 
 ## [Unreleased]
 
+## [0.10.2] - 2026-06-07
+
+### Added
+
+- **Pointer curation queue** — `.state/pointer-curation-queue.json`; sessionEnd enqueues placeholder/low-conf pointers; sessionStart `user_message` reminds agent
+- **distill-map.py** — map-staging per window (`chats/map-staging/`) + `--reduce` → `reduce-staging/` for agent map-reduce pipeline
+- **Metrics gap detector** — `memory-health.py` flags sessionStart telemetry without boundary events
+- **Crash rows** — `boundary-crash-report.py` + Python exception handler; structured `{status: crash}` in metrics JSONL
+
+### Changed
+
+- **Boundary/session-start shells** — crash report on invalid JSON; session-start emits pointer queue `user_message`
+- **distill-merge** — auto-writes map-staging for long chats; semantic-merge prompt prefers reduce-staging
+
 ## [0.10.1] - 2026-06-07
 
 ### Added

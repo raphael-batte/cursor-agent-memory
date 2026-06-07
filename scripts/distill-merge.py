@@ -21,6 +21,7 @@ from lib.chats_manifest import (  # noqa: E402
     upsert_processed,
 )
 from lib.distill_watermark import watermark_for_manifest  # noqa: E402
+from lib.distill_map import write_map_staging  # noqa: E402
 from lib.rolling_distill import update_rolling_after_merge  # noqa: E402
 from lib.apply_guard import check_cli_apply_guard  # noqa: E402
 from lib.defaults import APPLY_REVIEW_MAX_DAYS  # noqa: E402
@@ -221,6 +222,10 @@ def run_merge(
 
     staging_dir.mkdir(parents=True, exist_ok=True)
     staging_path.write_text(staging_md, encoding="utf-8")
+
+    map_path = write_map_staging(memory_home, extract)
+    if map_path is not None:
+        result["map_staging_path"] = str(map_path)
 
     extracts_dir = memory_home / "chats" / "extracts"
     extracts_dir.mkdir(parents=True, exist_ok=True)
