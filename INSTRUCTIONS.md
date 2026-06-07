@@ -8,7 +8,7 @@ Read when user invokes **@agent-memory** (single entry skill).
 
 ## Sync (first run)
 
-User says: **sync with agent memory**. Ask: **180 days** (default) + **handoff** yes/no. Run `sync-memory.py`. Report: Projects N · Distills M · Ready to work.
+User says: **sync with agent memory**. Ask: **180 days** (default) + optional **limit**. Run `sync-memory.py`. Report: Projects N · Distills M · Ready to work.
 
 See [ONBOARDING.md](ONBOARDING.md) · [docs/SYNC-AND-TRIGGERS.md](docs/SYNC-AND-TRIGGERS.md).
 
@@ -21,7 +21,7 @@ See [ONBOARDING.md](ONBOARDING.md) · [docs/SYNC-AND-TRIGGERS.md](docs/SYNC-AND-
 | Who am I / my projects | `$MEMORY_HOME/context/GLOBAL_CONTEXT.md` |
 | Git, CI, deploy rules | `$MEMORY_HOME/context/conventions.md` |
 | Servers, paths, ports | `$MEMORY_HOME/context/infra.md` |
-| Where we stopped | `<repo>/AGENT_HANDOFF.md` (if `handoff_mode` allows) → else distill Recent |
+| Where we stopped | `$MEMORY_HOME/chats/projects/<slug>.md` → **## Next step** (auto on distill) |
 | What we discussed | `$MEMORY_HOME/chats/projects/<slug>.md` |
 | Full chat when distill thin | `[title](uuid)` link in distill ## Recent |
 | What worked / failed (+/−) | `$MEMORY_HOME/feedback/{wins,fails}.md` |
@@ -33,13 +33,11 @@ See [ONBOARDING.md](ONBOARDING.md) · [docs/SYNC-AND-TRIGGERS.md](docs/SYNC-AND-
 
 **Goal:** minimum context to act. One layer is often enough.
 
-### Step 0 — `handoff_mode` + route
-
-Load `$MEMORY_HOME/config.json` → `handoff_mode` (`off` | `optional` | `required`).
+### Step 0 — route by question
 
 | Situation | Read |
 |-----------|------|
-| Continue known repo | handoff (if mode + Next Step) → **distill** `chats/projects/<slug>.md` |
+| Continue known repo | **distill** `chats/projects/<slug>.md` → **## Next step** first, then Recent / Decisions |
 | User asks «what did we decide» / history / «why» | distill `## Decisions` for that slug |
 | New project, unknown workspace | **GLOBAL_CONTEXT** — Projects table |
 | Task touches deploy, git, CI, secrets | **conventions.md** (not every session) |
@@ -52,23 +50,21 @@ Load `$MEMORY_HOME/config.json` → `handoff_mode` (`off` | `optional` | `requir
 **Flow A — continue known project (most common)**
 
 ```
-1. handoff_mode allows + AGENT_HANDOFF.md has Next Step → read handoff
-2. chats/projects/<slug>.md (latest Recent)
+1. chats/projects/<slug>.md → ## Next step
+2. ## Decisions + latest Recent
 3. If thin → open chat link [title](uuid) from Recent
 ```
 
 **Flow B — need background on decisions**
 
 ```
-1. chats/projects/<slug>.md
-2. Optional handoff if mode allows
+1. chats/projects/<slug>.md → ## Decisions
 ```
 
 **Flow C — first session / hub setup**
 
 ```
 1. context/GLOBAL_CONTEXT.md
-2. <repo>/AGENT_HANDOFF.md if exists
 ```
 
 **Flow D — cross-project convention question**
@@ -124,14 +120,14 @@ After reading routed layers, **self-check** (internal — do not dump files unle
 |------------|------------------------------|
 | GLOBAL_CONTEXT | Name projects from Projects table |
 | conventions | State one cross-project rule in one sentence |
-| handoff | State Next Step |
+| distill Next step | State forward pointer from `chats/projects/<slug>.md` |
 | feedback/fails | Name one `_superseded_` lesson (Flow E / proposing) |
 
 If any answer is wrong or empty → re-read that layer. Full checklist: [scripts/session-smoke.md](scripts/session-smoke.md).
 
-**Drift detection (monthly):** user asks "without reading handoff — what do you know about my projects?" — correct answer is "I don't know without the files"; listing projects without reading = routing broken.
+**Drift detection (monthly):** user asks "without reading memory files — what do you know about my projects?" — correct answer is "I don't know without the files"; listing projects without reading = routing broken.
 
-**Weekly integrity:** `python3 scripts/verify-memory.py --handoff <repo>/AGENT_HANDOFF.md` → fix all ❌.
+**Weekly integrity:** `python3 scripts/verify-memory.py --memory-home "$MEMORY_HOME"` → fix all ❌.
 
 ---
 
@@ -143,9 +139,6 @@ If any answer is wrong or empty → re-read that layer. Full checklist: [scripts
 
 | If this happened… | Update… |
 |-------------------|---------|
-| Completed step / changed phase / new next step | `<repo>/AGENT_HANDOFF.md` (skip if `handoff_mode: off`) |
-| New blocker or constraint | `AGENT_HANDOFF.md` → Blockers |
-| Delta ≥10 bullets or file >~80 lines | Rotate handoff → `handoff/archive/` |
 | New **cross-project** rule (git, CI, deploy policy) | `$MEMORY_HOME/context/conventions.md` |
 | New host, path, port | `$MEMORY_HOME/context/infra.md` |
 | New project in rotation | `$MEMORY_HOME/context/GLOBAL_CONTEXT.md` → Projects row |
@@ -171,10 +164,9 @@ If any answer is wrong or empty → re-read that layer. Full checklist: [scripts
 | **Global context** | `context/` | Who? Rules? Projects? | ~40–80 lines/file |
 | **Preferences** | `context/preferences.md` | How user thinks? | ~40 lines |
 | **Feedback** | `feedback/wins.md`, `fails.md` | What +/− worked? | accumulates, ~80 then archive |
-| **Chat memory** | `chats/projects/` | What discussed? (neutral) | ~100 lines/file |
-| **Handoff** | `<repo>/AGENT_HANDOFF.md` | Where now? Next step? | ~80 lines active |
+| **Chat memory** | `chats/projects/` | History + **## Next step** (forward pointer) | ~100 lines/file |
 
-**Separation:** rules (conventions) ≠ style (preferences) ≠ lessons (feedback) ≠ history (chats) ≠ now (handoff).
+**Separation:** rules (conventions) ≠ style (preferences) ≠ lessons (feedback) ≠ history (Decisions/Recent) ≠ now (**Next step** in distill).
 
 ---
 
@@ -289,22 +281,10 @@ python3 $FRAMEWORK_ROOT/scripts/verify-memory.py --memory-home "$MEMORY_HOME" --
 ### Distill template
 
 ```markdown
-## Summary | ## Decisions | ## Preferences | ## Open threads | ## Recent
+## Summary | ## Decisions | ## Next step | ## Preferences | ## Open threads | ## Recent
 ```
 
----
-
-## Handoff (`<repo>/`)
-
-```
-AGENT_HANDOFF.md
-handoff/INDEX.md
-handoff/archive/NNN-YYYY-MM-DD-<slug>.md
-```
-
-**Sections:** Phase Status · Last Completed Step · Next Step · Delta (≤10) · Blockers · Constraints
-
-**Rotation:** delta≈10 · file>80 lines · phase/topic closed → archive, bump episode
+**Forward pointer:** `## Next step` — one bullet, overwritten on each boundary distill (`lib/forward_pointer.py` heuristics on transcript tail). Agent may curate manually after hooks run.
 
 ---
 
@@ -334,8 +314,6 @@ Deep dives (read on demand, not symlinked by default): `skills/chat-memory/`, `s
 3. In chat: **sync with agent memory** (or `sync-memory.py`)
 4. Reload Cursor
 5. Optional: domain skills via `link-cursor-skills.sh --personal <name>`
-6. Optional handoff files when `handoff_mode` is not `off`
-
 ### Path resolution (all scripts)
 
 Priority: `--memory-home` CLI → `$MEMORY_HOME` env → `<install>/memory/`.  
@@ -352,10 +330,10 @@ Framework scripts write **only** to `$MEMORY_HOME` and `~/.cursor/` (hooks/skill
 - One giant context file
 - Raw jsonl in memory files
 - **Secrets in memory files** — passwords, tokens, API keys, JWT, private keys, `.env` values (blocked by distill redaction + `verify-memory`)
-- Pasting credentials into chat distill or handoff «for reference»
+- Pasting credentials into chat distill «for reference»
 - Committing `$MEMORY_HOME` to git
 - Putting personal data inside the `agent-memory` framework clone
-- Skipping handoff update at session end
+- Relying on stale **## Next step** without re-distill after long sessions
 
 ---
 

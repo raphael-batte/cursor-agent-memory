@@ -36,7 +36,7 @@ if [[ -z "$FRAMEWORK_ROOT" ]]; then
   FRAMEWORK_ROOT="$REPO_ROOT"
 fi
 
-FRAMEWORK_NAMES=(agent-memory global-context chat-memory agent-handoff feedback-memory)
+FRAMEWORK_NAMES=(agent-memory global-context chat-memory feedback-memory)
 
 is_framework_name() {
   local n="$1"

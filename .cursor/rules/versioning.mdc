@@ -28,4 +28,4 @@ Pre-commit enforces bump only for behaviour-changing paths. Emergency: `git comm
 ## Do not version
 
 - `$MEMORY_HOME` user data — never commit here
-- Per-repo `AGENT_HANDOFF.md` — episode numbers, not framework SemVer
+- Per-project `chats/projects/<slug>.md` — distill content, not framework SemVer

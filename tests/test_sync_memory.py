@@ -22,7 +22,6 @@ class TestSyncMemory(unittest.TestCase):
                 memory_home=hub,
                 framework_root=REPO_ROOT,
                 days=180,
-                handoff_mode="off",
                 dry_run=True,
                 install_hooks=False,
             )
@@ -32,7 +31,6 @@ class TestSyncMemory(unittest.TestCase):
             self.assertIn("distills_planned", report)
             self.assertIn("candidates", report)
             self.assertIn("message", report)
-            self.assertEqual(report["handoff_mode"], "off")
 
     def test_truncated_when_limit_smaller(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -52,7 +50,7 @@ class TestSyncMemory(unittest.TestCase):
             self.assertIn("pending_90d", stats)
             self.assertIn("pending_180d", stats)
 
-    def test_writes_handoff_mode(self) -> None:
+    def test_sync_without_handoff_mode(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             hub = Path(tmp) / "hub"
             minimal_hub(hub, projects=1)
@@ -64,7 +62,7 @@ class TestSyncMemory(unittest.TestCase):
                 limit=0,
             )
             cfg = json.loads((hub / "config.json").read_text())
-            self.assertEqual(cfg.get("handoff_mode"), "optional")
+            self.assertNotIn("handoff_mode", cfg)
 
 
 if __name__ == "__main__":

@@ -2,13 +2,13 @@
 name: agent-memory
 description: >
   Single entry for Cursor agent memory. Sync with "sync with agent memory". Routes layers
-  by task — handoff (optional), distills with chat links, global context, feedback.
+  by task — distill with ## Next step forward pointer, global context, feedback.
   MEMORY_HOME at install clone memory/. Do NOT load all layers every session.
 ---
 
 # Agent Memory
 
-**Version:** 0.8.9 — see [VERSIONING.md](VERSIONING.md)
+**Version:** 0.9.0 — see [VERSIONING.md](VERSIONING.md)
 
 **Full protocol:** [INSTRUCTIONS.md](INSTRUCTIONS.md) · **Overview:** [ARCHITECTURE.md](ARCHITECTURE.md)
 
@@ -41,10 +41,6 @@ Show the user: `total_chats`, `active_90d`, `pending_90d`, `active_180d`, `pendi
 
 1. **Period + limit:** e.g. «90 days, all pending» or «180 days, max 30» or «only 20 newest».
    - If pending > 100 and user did not set a limit — warn and ask for a number.
-2. **Handoff:** use `AGENT_HANDOFF.md` in repos?
-   - **No** → `handoff_mode: off`
-   - **Yes / not sure** → `optional`
-   - **Required** → always read handoff when present
 
 ### Step 3 — Run sync (after user confirms)
 
@@ -52,8 +48,7 @@ Show the user: `total_chats`, `active_90d`, `pending_90d`, `active_180d`, `pendi
 python3 "$FRAMEWORK_ROOT/scripts/sync-memory.py" \
   --memory-home "$MEMORY_HOME" \
   --days 90 \
-  --limit 38 \
-  --handoff-mode optional
+  --limit 38
 ```
 
 Optional preview: add `--dry-run` before the real run. Reload Cursor after hooks install.
@@ -62,29 +57,26 @@ Optional preview: add `--dry-run` before the real run. Reload Cursor after hooks
 
 Always end with:
 
-`Projects in GLOBAL_CONTEXT: N · Chat distills: M · Handoff: off|optional|required · Ready to work.`
+`Projects in GLOBAL_CONTEXT: N · Chat distills: M · Forward pointer: chats/projects/<slug>.md ## Next step · Ready to work.`
 
 Then **offer** (user confirms each — do not run silently):
 
 1. **`fill Me in GLOBAL_CONTEXT from our chats`** — infer role, stack, tools, style from distilled history.
-2. **Review `[bootstrap]` Decisions** in `chats/projects/*.md` — refine heuristic seeds or run semantic merge from `merge-staging/`.
-3. **Handoff** — if mode is not `off`, explain `AGENT_HANDOFF.md` per repo (`templates/repo-handoff/`) and offer to copy into the open workspace.
+2. **Review `[bootstrap]` Decisions** — refine heuristic seeds or semantic merge from `merge-staging/`.
+3. **Curate `## Next step`** if hooks missed the real forward pointer.
 
 ---
 
 ## Session start (routing)
 
-Read `$MEMORY_HOME/config.json` → `handoff_mode` (`off` | `optional` | `required`).
-
 | Order | Layer | Read |
 |-------|-------|------|
-| 1 (if mode allows) | Handoff | `<repo>/AGENT_HANDOFF.md` when Next Step is non-empty |
-| 2 | Distill | `$MEMORY_HOME/chats/projects/<slug>.md` (latest Recent by date) |
-| 3 (if slug unclear) | Global | `$MEMORY_HOME/context/GLOBAL_CONTEXT.md` |
+| 1 | Distill | `$MEMORY_HOME/chats/projects/<slug>.md` → **## Next step**, then Decisions / Recent |
+| 2 (if slug unclear) | Global | `$MEMORY_HOME/context/GLOBAL_CONTEXT.md` |
 
-**Do not** invoke separate skills — read files directly. Internal detail: `skills/chat-memory/SKILL.md`, etc.
+**Do not** invoke separate skills — read files directly.
 
-**If distill lacks detail:** open full chat via markdown link `[title](uuid)` in Recent, or read transcript on demand (never bulk-load raw jsonl).
+**If distill lacks detail:** open full chat via `[title](uuid)` in Recent (never bulk-load raw jsonl).
 
 ---
 
@@ -92,27 +84,19 @@ Read `$MEMORY_HOME/config.json` → `handoff_mode` (`off` | `optional` | `requir
 
 | Question | Read |
 |----------|------|
-| Who / projects / rules | `$MEMORY_HOME/context/GLOBAL_CONTEXT.md`, `conventions.md`, `infra.md` |
-| Where we stopped | handoff (optional) → else distill Recent |
-| Past decisions | `$MEMORY_HOME/chats/projects/<slug>.md` → `## Decisions` |
-| Wins / fails / style | `$MEMORY_HOME/feedback/{wins,fails}.md`, `preferences.md` |
-
-| Situation | Read |
-|-----------|------|
-| Continue known repo | handoff (if mode + Next Step) → distill |
-| «What did we decide» | distill Decisions |
-| Other project mid-chat | distill for that slug + `chats/INDEX.md` |
-| Plan / CI / deploy | feedback fails + wins + preferences |
+| Who / projects / rules | `context/GLOBAL_CONTEXT.md`, `conventions.md`, `infra.md` |
+| Where we stopped | `chats/projects/<slug>.md` → **## Next step** |
+| Past decisions | `chats/projects/<slug>.md` → `## Decisions` |
+| Wins / fails / style | `feedback/{wins,fails}.md`, `preferences.md` |
 
 ---
 
 ## Session end
 
-Distill runs via hooks (`sessionEnd`, `preCompact`, `sessionStart` catch-up). Agent updates only what changed:
+Hooks (`sessionEnd`, `preCompact`, `sessionStart`) auto-distill and refresh **## Next step**. Agent updates only what changed:
 
-- `handoff_mode` not `off` and user asked → `AGENT_HANDOFF.md`
 - New cross-repo rule → `conventions.md`
-- Curated decisions → semantic-merge from `merge-staging/` (see `skills/semantic-merge/SKILL.md`)
+- Curated decisions → semantic-merge from `merge-staging/`
 - Lesson learned → `feedback/wins.md` or `fails.md`
 
 Weekly: `python3 "$FRAMEWORK_ROOT/scripts/verify-memory.py" --memory-home "$MEMORY_HOME"`
@@ -129,4 +113,4 @@ bash scripts/init-memory.sh
 bash scripts/link-cursor-skills.sh --force
 ```
 
-Then in chat: **sync with agent memory**. Guide: [MIGRATION.md](MIGRATION.md).
+Then in chat: **sync with agent memory**. Guide: [ONBOARDING.md](ONBOARDING.md).

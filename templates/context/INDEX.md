@@ -5,11 +5,11 @@ Skills: **global-context** · Framework: **agent-memory**
 
 ## When to read
 
-**On demand** — not every session. Default repo work → `AGENT_HANDOFF.md` first.
+**On demand** — not every session. Default repo work → `chats/projects/<slug>.md` ## Next step.
 
 | Situation | Read |
 |-----------|------|
-| Continue known project | `<repo>/AGENT_HANDOFF.md` |
+| Continue known project | `chats/projects/<slug>.md` → ## Next step |
 | Unknown project / first hub setup | [GLOBAL_CONTEXT.md](GLOBAL_CONTEXT.md) |
 | Git, CI, deploy, secrets | [conventions.md](conventions.md) |
 | Hosts, paths, environments | [infra.md](infra.md) |
@@ -22,7 +22,7 @@ Skills: **global-context** · Framework: **agent-memory**
 context/           who + rules + preferences
 feedback/          what worked/failed (+/−)
 chats/projects/    what we discussed (neutral)
-<repo>/handoff/    where we are now
+chats/projects/    ## Next step forward pointer
 ```
 
 ## Where to write
@@ -32,7 +32,7 @@ chats/projects/    what we discussed (neutral)
 | New project row | `GLOBAL_CONTEXT.md` |
 | Cross-project rule | `conventions.md` |
 | Host / path | `infra.md` |
-| Session progress | `<repo>/AGENT_HANDOFF.md` |
+| Session progress | `chats/projects/<slug>.md` → ## Next step |
 | Chat decisions | `chats/projects/<slug>.md` |
 | Rejected / praised approach | `feedback/fails.md` / `wins.md` |
 | Thinking style | `preferences.md` |

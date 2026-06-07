@@ -13,7 +13,7 @@ _Nav: [INDEX.md](INDEX.md) · [conventions.md](conventions.md) · [infra.md](inf
 
 | Project | Path / repo | Status | Details |
 |---------|-------------|--------|---------|
-| example-app | `~/example-app` | active | handoff + chats/projects/example-app.md |
+| example-app | `~/example-app` | active | chats/projects/example-app.md |
 
 ## Quick pointers
 
@@ -25,4 +25,4 @@ _Nav: [INDEX.md](INDEX.md) · [conventions.md](conventions.md) · [infra.md](inf
 
 ## Notes
 
-- (Optional one-liners; detail → chats or handoff)
+- (Optional one-liners; detail → chats/projects)

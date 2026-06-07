@@ -41,7 +41,7 @@ class TestMemoryStatusMetrics(unittest.TestCase):
 
     def test_collect_and_brief(self) -> None:
         minimal_hub(self.hub, projects=2)
-        data = ms.collect(self.hub, None, None)
+        data = ms.collect(self.hub, None)
         self.assertEqual(data["projects"], 2)
         self.assertEqual(data["wins"], 1)
         self.assertEqual(data["fails"], 2)

@@ -12,7 +12,7 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
-from lib.defaults import MAX_HANDOFF_LINES, MAX_LAYER_FILE_LINES  # noqa: E402
+from lib.defaults import MAX_LAYER_FILE_LINES  # noqa: E402
 from lib.memory_config import resolve_memory_home  # noqa: E402
 from lib.gitleaks_scan import (  # noqa: E402
     findings_to_hits,
@@ -167,21 +167,6 @@ def check_superseded_refs(memory_home: Path) -> CheckResult:
     return CheckResult("superseded § refs", True, f"{len(refs)} ref(s) valid")
 
 
-def check_handoff(handoff_path: Path | None, max_lines: int) -> CheckResult:
-    if handoff_path is None:
-        return CheckResult("handoff size", True, "skipped (no --handoff)")
-    if not handoff_path.is_file():
-        return CheckResult("handoff size", False, f"not found: {handoff_path}")
-    lines = line_count(handoff_path)
-    if lines >= max_lines:
-        return CheckResult(
-            "handoff size",
-            False,
-            f"{lines} lines (max {max_lines - 1}) — rotate to handoff/archive/",
-        )
-    return CheckResult("handoff size", True, f"{lines} lines (< {max_lines})")
-
-
 def layer_md_paths(memory_home: Path) -> list[Path]:
     paths: list[Path] = []
     for sub in ("context", "feedback"):
@@ -279,8 +264,6 @@ def check_no_secrets(memory_home: Path, *, strict: bool = False) -> CheckResult:
 def run_checks_for_hub(
     memory_home: Path,
     *,
-    handoff: Path | None = None,
-    max_handoff_lines: int = MAX_HANDOFF_LINES,
     max_file_lines: int = MAX_LAYER_FILE_LINES,
     strict_secrets: bool = False,
     gitleaks: bool = False,
@@ -289,8 +272,6 @@ def run_checks_for_hub(
     """Run all checks. Returns (results, warnings). Warnings do not fail verify."""
     args_ns = argparse.Namespace(
         memory_home=str(memory_home),
-        handoff=str(handoff) if handoff else None,
-        max_handoff_lines=max_handoff_lines,
         max_file_lines=max_file_lines,
         strict_secrets=strict_secrets,
         quiet=False,
@@ -302,7 +283,6 @@ def run_checks_for_hub(
         check_manifest(memory_home),
         check_superseded_refs(memory_home),
         check_no_secrets(memory_home, strict=strict_secrets),
-        check_handoff(handoff, max_handoff_lines),
         check_oversized_files(memory_home, max_file_lines),
     ]
     if gitleaks or gitleaks_required:
@@ -314,11 +294,8 @@ def run_checks_for_hub(
 
 def run_checks(args: argparse.Namespace) -> tuple[list[CheckResult], list[str]]:
     memory_home = resolve_memory_home(args.memory_home, script_file=__file__)
-    handoff = Path(args.handoff).expanduser() if args.handoff else None
     return run_checks_for_hub(
         memory_home,
-        handoff=handoff,
-        max_handoff_lines=args.max_handoff_lines,
         max_file_lines=args.max_file_lines,
         strict_secrets=args.strict_secrets,
         gitleaks=args.gitleaks,
@@ -335,8 +312,6 @@ def summarize_results(results: list[CheckResult]) -> tuple[int, int]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--memory-home")
-    parser.add_argument("--handoff")
-    parser.add_argument("--max-handoff-lines", type=int, default=MAX_HANDOFF_LINES)
     parser.add_argument("--max-file-lines", type=int, default=MAX_LAYER_FILE_LINES)
     parser.add_argument(
         "--strict-secrets",

@@ -108,7 +108,7 @@ def distill_jsonl(
     memory_home: Path,
     projects_root: Path,
     strategy: str = "auto",
-    apply: bool = False,
+    apply: bool = True,
     bootstrap_decisions: bool = False,
 ) -> dict[str, Any]:
     chat_id = jsonl.stem

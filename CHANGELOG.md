@@ -6,6 +6,22 @@ Data hub (`$MEMORY_HOME`) is **not** versioned with this file.
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-06-07
+
+### Removed
+
+- **Per-repo handoff layer** — `AGENT_HANDOFF.md`, `handoff_mode`, `templates/repo-handoff/`, `agent-handoff.mdc`
+
+### Added
+
+- **`## Next step`** forward pointer in `chats/projects/<slug>.md` — auto-extracted on every boundary distill (`lib/forward_pointer.py`)
+- Boundary hooks use `apply=True` — Recent + Next step written on `sessionEnd` / `preCompact` / catch-up
+
+### Changed
+
+- Session routing: distill **Next step** first (no repo handoff files)
+- `sync-memory.py` — no `--handoff-mode`; SKILL / INSTRUCTIONS / ONBOARDING updated
+
 ## [0.8.9] - 2026-06-07
 
 ### Added

@@ -16,7 +16,7 @@ MEMORY_HOME_OVERRIDE=""
 FRAMEWORK_OVERRIDE=""
 DO_LIST=false
 
-FRAMEWORK_NAMES=(agent-memory global-context chat-memory semantic-merge agent-handoff feedback-memory)
+FRAMEWORK_NAMES=(agent-memory global-context chat-memory semantic-merge feedback-memory)
 
 usage() {
   cat <<EOF

@@ -21,28 +21,12 @@ class TestMemoryDoctor(unittest.TestCase):
             report = md.run_doctor(
                 memory_home=hub,
                 framework_root=None,
-                handoff=None,
                 strict_secrets=False,
             )
             self.assertTrue(report["memory_home_exists"])
             self.assertGreaterEqual(report["verify"]["passed"], 5)
             self.assertIn("path_resolution", report)
-            self.assertEqual(report.get("handoff_mode"), "optional")
-
-    def test_handoff_mode_off_in_doctor(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            hub = Path(tmp)
-            minimal_hub(hub)
-            (hub / "config.json").write_text(
-                '{"handoff_mode":"off"}', encoding="utf-8"
-            )
-            report = md.run_doctor(
-                memory_home=hub,
-                framework_root=None,
-                handoff=None,
-                strict_secrets=False,
-            )
-            self.assertEqual(report["handoff_mode"], "off")
+            self.assertNotIn("handoff_mode", report)
 
     def test_fix_dry_run(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

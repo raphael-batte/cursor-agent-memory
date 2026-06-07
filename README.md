@@ -1,6 +1,6 @@
 # Cursor Agent Memory
 
-**Version:** 0.8.9 — see [VERSIONING.md](VERSIONING.md) · CI on push/PR · Release on tag ([workflows](.github/workflows/))
+**Version:** 0.9.0 — see [VERSIONING.md](VERSIONING.md) · CI on push/PR · Release on tag ([workflows](.github/workflows/))
 Created by [raphaelbatte](https://github.com/raphael-batte) · [raphbatte.com](https://raphbatte.com)
 
 ## What this is
@@ -9,8 +9,7 @@ Created by [raphaelbatte](https://github.com/raphael-batte) · [raphbatte.com](h
 
 - **Global context** — who you are, which projects, cross-repo rules, infra
 - **Feedback** — what worked (+) and what to stop proposing (−)
-- **Chat memory** — distilled Cursor transcripts into curated project files
-- **Handoff** — per-repo «where we stopped» (`AGENT_HANDOFF.md`)
+- **Chat memory** — distilled transcripts + **`## Next step`** forward pointer (auto on hooks)
 
 Agents load **one layer per task** (INDEX-first), not everything every time. Scripts extract chats without raw jsonl, verify hub integrity, and remind you at session end.
 
@@ -29,22 +28,19 @@ flowchart TB
     FB[feedback wins/fails + preferences]
     CH[chats/projects + manifest]
   end
-  HO[AGENT_HANDOFF per repo]
   TR[Cursor transcripts jsonl read-only]
 
-  TR -->|distill-extract / distill-merge| CH
+  TR -->|distill + forward_pointer| CH
   GC -->|route by task| FB
   GC -->|route by task| CH
-  CH -->|history| HO
-  FB -->|before proposing plans| HO
+  FB -->|before proposing plans| CH
 ```
 
 | Layer | Answers | Location |
 |-------|---------|----------|
 | Global context | Who? Rules? Projects? Hosts? | `$MEMORY_HOME/context/` |
 | Feedback | What +/− worked? How user thinks? | `feedback/`, `preferences.md` |
-| Chat memory | What did we discuss/decide? | `chats/projects/<slug>.md` |
-| Handoff | What is the **next step now**? | `<repo>/AGENT_HANDOFF.md` |
+| Chat memory | History + **next step now** | `chats/projects/<slug>.md` (`## Next step`) |
 
 ## Who reads what
 
@@ -61,7 +57,7 @@ flowchart TB
 |------|----------|
 | **Skill** (1 default) | `agent-memory` — internal docs under `skills/*/` |
 | **Scripts** | distill, `sync-memory`, verify, doctor, hooks installer |
-| **Templates** | Empty hub scaffolds: context, feedback, chats, handoff, Cursor rules/hooks |
+| **Templates** | Empty hub scaffolds: context, feedback, chats, Cursor hooks |
 | **CI** | Tests on push/PR; pinned gitleaks; GitHub Release on `v*` tag |
 | **Tests** | 100+ unit/shell checks including sync, distill links, routing, secrets |
 
@@ -77,21 +73,20 @@ bash scripts/link-cursor-skills.sh --force   # one skill: agent-memory
 
 `link-cursor-skills.sh` / `init-memory.sh` / `sync-memory.py` record the real clone path in config — install folder name is arbitrary.
 
-In Cursor: add `@agent-memory`, then say **sync with agent memory** (agent runs `sync-memory.py`, asks 180 days + handoff mode). Reload window after hooks install.
+In Cursor: add `@agent-memory`, then say **sync with agent memory**. Reload window after hooks install.
 
 Manual sync:
 
 ```bash
 bash scripts/init-memory.sh
-python3 scripts/sync-memory.py --days 180 --handoff-mode optional
+python3 scripts/sync-memory.py --days 180
 ```
 
 ### Config (`config.json`)
 
 | File | Purpose |
 |------|---------|
-| `$MEMORY_HOME/config.json` | `framework_root`, `handoff_mode`, optional `linked_skills` |
-| `memory/config.json` | `framework_root`, `memory_home`, `handoff_mode` (auto-set on init/link/sync) |
+| `$MEMORY_HOME/config.json` | `framework_root`, `memory_home`, optional `linked_skills` |
 
 Scripts resolve paths: CLI flag → env → config → default. No `export` every session.
 
@@ -104,15 +99,7 @@ Scripts resolve paths: CLI flag → env → config → default. No `export` ever
 
 **Never** store secrets in `$MEMORY_HOME`. Distill redacts known patterns; `verify-memory.py` scans the hub.
 
-## Per-project handoff (optional)
-
-When `handoff_mode` is not `off`:
-
-```bash
-cp templates/repo-handoff/AGENT_HANDOFF.md /path/to/your-repo/
-```
-
-Sync bootstraps Projects in GLOBAL_CONTEXT from distills. Chat files appear under `chats/projects/<slug>.md` automatically.
+Sync bootstraps Projects in GLOBAL_CONTEXT from distills. Hooks keep `chats/projects/<slug>.md` **## Next step** fresh from transcript tails.
 
 ## Migration, skills, status
 

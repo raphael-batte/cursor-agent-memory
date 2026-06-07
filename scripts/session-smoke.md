@@ -13,7 +13,7 @@ Agent answers **internally** (do not dump files unless user asks). If any answer
 ```markdown
 - [ ] GLOBAL_CONTEXT — name active projects from Projects table
 - [ ] conventions — state one cross-project rule (one sentence)
-- [ ] handoff — state Next Step (if repo has AGENT_HANDOFF.md)
+- [ ] distill Next step — state forward pointer from `chats/projects/<slug>.md`
 - [ ] feedback/fails — name one `_superseded_` lesson (if proposing plans / CI / deploy)
 ```
 
@@ -26,7 +26,7 @@ Agent answers **internally** (do not dump files unless user asks). If any answer
 
 User asks **before** agent reads files:
 
-> "Without reading handoff — what do you know about my projects?"
+> "Without reading memory files — what do you know about my projects?"
 
 | Response | Meaning |
 |----------|---------|
@@ -34,21 +34,14 @@ User asks **before** agent reads files:
 | Lists projects from "memory" without reading | ❌ drift — agent ignoring hub |
 | Silent or generic | ⚠️ re-run layer verification |
 
-After drift check, proceed normally: read handoff → act.
+After drift check, proceed normally: read distill ## Next step → act.
 
 ---
 
 ## 3. Weekly integrity (human or cron)
 
 ```bash
-python3 $FRAMEWORK_ROOT/scripts/verify-memory.py \
-  --handoff /path/to/your-repo/AGENT_HANDOFF.md
-```
-
-Or from copied script in your data hub:
-
-```bash
-python3 $MEMORY_HOME/scripts/verify-memory.py --handoff <repo>/AGENT_HANDOFF.md
+python3 $FRAMEWORK_ROOT/scripts/verify-memory.py --memory-home "$MEMORY_HOME"
 ```
 
 Fix all ❌ before relying on memory for big decisions.
@@ -59,7 +52,7 @@ Fix all ❌ before relying on memory for big decisions.
 
 | Situation | Read (usually enough) |
 |-----------|------------------------|
-| Continue known repo | `AGENT_HANDOFF.md` only |
+| Continue known repo | `chats/projects/<slug>.md` → ## Next step |
 | Propose CI / deploy / architecture | `feedback/fails.md` → `wins.md` → `preferences.md` |
 | Cross-project rules | `conventions.md` |
 

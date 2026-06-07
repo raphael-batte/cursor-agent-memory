@@ -29,7 +29,7 @@ def minimal_hub(root: Path, *, projects: int = 2, with_fails: bool = True) -> No
     (root / "chats" / "projects").mkdir(parents=True)
 
     projects_table = "\n".join(
-        f"| app{i} | `~/app{i}` | active | handoff |"
+        f"| app{i} | `~/app{i}` | active | distill |"
         for i in range(1, projects + 1)
     )
     gc = f"""# Global Context — Test

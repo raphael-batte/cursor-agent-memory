@@ -2,7 +2,7 @@
 _Last updated: YYYY-MM-DD_  
 _Index: [INDEX.md](INDEX.md)_
 
-Stable rules for all repos. Session deltas → repo handoff.
+Stable rules for all repos. Session deltas → chats/projects ## Next step.
 
 ## Git
 
@@ -23,4 +23,4 @@ Stable rules for all repos. Session deltas → repo handoff.
 ## Agent memory
 
 - **Hub:** `$MEMORY_HOME` (`<install>/memory/`, gitignored)
-- **Session order:** agent-handoff first (Flow A); other layers on demand
+- **Session order:** distill ## Next step first (Flow A); other layers on demand

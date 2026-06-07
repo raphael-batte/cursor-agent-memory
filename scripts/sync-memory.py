@@ -17,12 +17,10 @@ sys.path.insert(0, str(SCRIPT_DIR))
 from lib.chats_manifest import load_manifest  # noqa: E402
 from lib.global_context_bootstrap import bootstrap_global_context  # noqa: E402
 from lib.memory_config import (  # noqa: E402
-    load_hub_config,
     persist_framework_root,
     resolve_framework_root,
     resolve_memory_home,
 )
-from lib.memory_routing import normalize_handoff_mode  # noqa: E402
 from lib.pending_chats import list_chats_needing_distill, scan_chat_stats  # noqa: E402
 from lib.boundary_hooks import distill_jsonl  # noqa: E402
 
@@ -65,18 +63,6 @@ def _install_hooks(framework_root: Path) -> dict:
     }
 
 
-def _write_handoff_mode(memory_home: Path, mode: str, *, dry_run: bool) -> str:
-    normalized = normalize_handoff_mode(mode)
-    cfg_path = memory_home / "config.json"
-    if dry_run:
-        return normalized
-    data = load_hub_config(memory_home)
-    data["handoff_mode"] = normalized
-    cfg_path.parent.mkdir(parents=True, exist_ok=True)
-    cfg_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
-    return normalized
-
-
 def run_scan(
     *,
     memory_home: Path,
@@ -111,7 +97,6 @@ def run_sync(
     memory_home: Path,
     framework_root: Path,
     days: int = DEFAULT_DAYS,
-    handoff_mode: str = "optional",
     dry_run: bool = False,
     install_hooks: bool = True,
     projects_root: Path = DEFAULT_PROJECTS_ROOT,
@@ -142,9 +127,6 @@ def run_sync(
             framework_root.resolve(),
             memory_home=memory_home,
         )
-
-    mode = _write_handoff_mode(memory_home, handoff_mode, dry_run=dry_run)
-    report["handoff_mode"] = mode
 
     if install_hooks and not dry_run:
         report["hooks"] = _install_hooks(framework_root)
@@ -218,7 +200,7 @@ def run_sync(
         report["message"] = (
             f"Projects in GLOBAL_CONTEXT: {report['projects']}. "
             f"Chat distills: {report['distills']} ({days} days){trunc_note}. "
-            f"Handoff: {mode}. Ready to work."
+            f"Forward pointer: chats/projects/<slug>.md ## Next step. Ready to work."
         )
     else:
         report["message"] = "Sync incomplete — check report."
@@ -230,11 +212,6 @@ def main() -> int:
     parser.add_argument("--memory-home", help="Hub path override")
     parser.add_argument("--framework-root", help="Framework clone path")
     parser.add_argument("--days", type=int, default=DEFAULT_DAYS)
-    parser.add_argument(
-        "--handoff-mode",
-        choices=("off", "optional", "required"),
-        default="optional",
-    )
     parser.add_argument("--scan-only", action="store_true", help="Fast inventory only")
     parser.add_argument("--dry-run", action="store_true", help="Plan distill without writing")
     parser.add_argument("--no-hooks", action="store_true")
@@ -269,7 +246,6 @@ def main() -> int:
             memory_home=memory_home,
             framework_root=framework_root,
             days=args.days,
-            handoff_mode=args.handoff_mode,
             dry_run=args.dry_run,
             install_hooks=not args.no_hooks,
             projects_root=projects_root,

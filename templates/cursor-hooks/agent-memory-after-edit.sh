@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Cursor afterFileEdit — log memory-relevant file saves (handoff + chats).
+# Cursor afterFileEdit — log memory-relevant file saves (chats hub).
 set -euo pipefail
 
 _HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -38,10 +38,7 @@ parts = {x.lower() for x in p.parts}
 
 memory_hit = False
 kind = ""
-if name.upper() == "AGENT_HANDOFF.MD":
-    memory_hit = True
-    kind = "handoff"
-elif "chats" in parts and p.suffix == ".md":
+if "chats" in parts and p.suffix == ".md":
     memory_hit = True
     kind = "chat"
 elif name == "manifest.json" and "chats" in parts:

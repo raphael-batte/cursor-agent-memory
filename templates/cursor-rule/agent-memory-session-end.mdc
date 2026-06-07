@@ -5,7 +5,7 @@ alwaysApply: false
 
 # Session end — memory checklist
 
-When the user ends a session, mentions handoff/distill, or you see `[agent-memory] Session end` in context:
+When the user ends a session, mentions distill, or you see `[agent-memory] Session end` in context:
 
 ## 1. Read hook log (if exists)
 
@@ -19,21 +19,21 @@ Last lines contain the sessionEnd checklist (also in stderr during hook run).
 
 | Step | Action |
 |------|--------|
-| Handoff | Only if `$MEMORY_HOME/config.json` → `handoff_mode` is not `off` — update `<repo>/AGENT_HANDOFF.md` when phase/next step changed |
-| Distill | Hooks auto-distill on sessionEnd; review `merge-staging/`; curate Decisions from staging |
-| Fallback | If distill lacks detail → open chat link `[title](uuid)` in `chats/projects/<slug>.md` ## Recent |
+| Forward pointer | Hooks auto-update `chats/projects/<slug>.md` **## Next step** — curate if heuristic missed |
+| Distill | Review `merge-staging/`; curate **## Decisions** from staging |
+| Fallback | If distill lacks detail → open chat link `[title](uuid)` in ## Recent |
 | Verify | `verify-memory.py --memory-home $MEMORY_HOME` |
 | Pending | `list-chats.py --pending` — note unprocessed chats |
 
 ## 3. Semantic merge (not optional for new distill)
 
-- `--apply` only updates **Recent** — never replaces agent curation of `## Decisions`
+- `--apply` updates **Recent** + **Next step** — never replaces agent curation of `## Decisions`
 - Use skill **semantic-merge** + `templates/chats/semantic-merge-prompt.md`
 
 ## Paths
 
-- Framework: `$FRAMEWORK_ROOT` from `~/.cursor/hooks/agent-memory.env` (set by `install-memory-hooks.sh`)
-- Hub: `$MEMORY_HOME` from `~/.cursor/hooks/agent-memory.env` or `<install>/memory/config.json`
-- Edit log: `~/.cursor/hooks/agent-memory-edit.log` (afterFileEdit saves)
+- Framework: `$FRAMEWORK_ROOT` from `~/.cursor/hooks/agent-memory.env`
+- Hub: `$MEMORY_HOME` from hook env or `<install>/memory/config.json`
+- Edit log: `~/.cursor/hooks/agent-memory-edit.log`
 
-Install hooks: `bash scripts/install-memory-hooks.sh` (from your framework clone)
+Install hooks: `bash scripts/install-memory-hooks.sh`

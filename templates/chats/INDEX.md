@@ -8,8 +8,8 @@ Distilled conversation history. Skill: **chat-memory**
 
 | Situation | Read |
 |-----------|------|
-| Current next step | `<repo>/AGENT_HANDOFF.md` (not here) |
-| Past decisions / why | `projects/<slug>.md` below |
+| Current next step | `projects/<slug>.md` → **## Next step** |
+| Past decisions / why | `projects/<slug>.md` → **## Decisions** |
 
 ## Projects
 

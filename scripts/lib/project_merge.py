@@ -7,11 +7,19 @@ from pathlib import Path
 
 from lib.defaults import DEFAULT_KEYWORDS, MAX_LAYER_FILE_LINES
 from lib.distill_links import recent_bullet
+from lib.forward_pointer import extract_forward_pointer
 from lib.secrets_guard import scan_file
 from lib.timestamps import now_iso
 
 LAST_UPDATED = re.compile(r"^_Last updated:\s*.+$", re.M | re.I)
-DEFAULT_SECTIONS = ("Summary", "Decisions", "Preferences", "Open threads", "Recent")
+DEFAULT_SECTIONS = (
+    "Summary",
+    "Decisions",
+    "Next step",
+    "Preferences",
+    "Open threads",
+    "Recent",
+)
 
 
 def _today() -> str:
@@ -137,6 +145,7 @@ def apply_extract_to_project(
             f"_Last updated: {day}_\n\n"
             "## Summary\n\n\n"
             "## Decisions\n\n\n"
+            "## Next step\n\n\n"
             "## Preferences\n\n\n"
             "## Open threads\n\n\n"
             "## Recent\n\n"
@@ -164,6 +173,12 @@ def apply_extract_to_project(
             sections["Decisions"] = _format_bullets(seeds)
             decisions_added = len(seeds)
 
+    next_step = extract_forward_pointer(extract)
+    next_step_updated = False
+    if next_step:
+        sections["Next step"] = f"- {next_step}"
+        next_step_updated = True
+
     merged = _join_sections(preamble, sections)
 
     tmp = project_path.with_suffix(".md.tmpcheck")
@@ -182,6 +197,7 @@ def apply_extract_to_project(
     return {
         "project_file": str(project_path),
         "decisions_added": decisions_added,
+        "next_step_updated": next_step_updated,
         "recent_lines": min(len(recent_items), max_recent),
         "lines": len(merged.splitlines()),
         "over_limit": len(merged.splitlines()) > MAX_LAYER_FILE_LINES,

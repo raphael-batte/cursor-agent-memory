@@ -36,24 +36,20 @@ Each layer answers a different question. **Do not load all layers every session.
 | **Global context** | `$MEMORY_HOME/context/` | Who? Which projects? Rules? Infra? | ~30–80 lines/file |
 | **Preferences** | `context/preferences.md` | How does the user think and communicate? | ~40 lines |
 | **Feedback** | `feedback/wins.md`, `fails.md` | What worked (+) / failed (−) across sessions? | grows; archive ~80 lines |
-| **Chat memory** | `chats/projects/<slug>.md` | What was discussed and decided? (neutral tone) | ~100 lines/file |
-| **Handoff** (optional) | `<repo>/AGENT_HANDOFF.md` | Phase / next step when `handoff_mode` allows | ~80 lines active |
+| **Chat memory** | `chats/projects/<slug>.md` | History + **`## Next step`** forward pointer | ~100 lines/file |
 
 **Separation of concerns:**
 
 - `conventions.md` — normative rules (deploy policy, git flow)
 - `preferences.md` — style and thinking (not rules)
 - `feedback/` — empirical lessons; `_superseded_` when a fail became a convention
-- `chats/projects/` — project history from distilled Cursor chats
-- `AGENT_HANDOFF.md` — current sprint state per repo
+- `chats/projects/` — distill history; **Next step** = where to continue (auto on hooks)
 
 ## Routing (session start)
 
-Read `handoff_mode` from hub config (`off` | `optional` | `required`).
-
 ```
-Continue known repo     → handoff (if allowed) → chats/projects/<slug>.md
-Past decisions / why    → distill Decisions; chat link [title](uuid) if needed
+Continue known repo     → chats/projects/<slug>.md → ## Next step
+Past decisions / why    → distill ## Decisions; chat link [title](uuid) if needed
 New or unknown project  → GLOBAL_CONTEXT.md → Projects table
 Deploy / CI / git task  → conventions.md
 Proposing architecture  → fails + wins + preferences (Flow E)
@@ -72,7 +68,7 @@ transcript jsonl
     → distill-extract.py     structured JSON (~10–50 KB)
     → distill-merge.py       manifest + merge-staging/*.md
     → semantic-merge skill   agent curates ## Decisions
-    → distill-merge --apply  bookkeeping only (Recent ≤3, _Last updated_)
+    → apply on hooks/sync     Recent ≤3 + ## Next step (forward_pointer.py)
     → verify-memory.py       integrity + secrets scan
 ```
 
@@ -92,7 +88,7 @@ Cursor hooks (`install-memory-hooks.sh`, run by sync):
 |------|------|
 | `sessionStart` | Catch-up distill for open workspace |
 | `sessionEnd` / `preCompact` | Distill current chat; checklist log |
-| `afterFileEdit` | Log hub/handoff edits |
+| `afterFileEdit` | Log chats hub edits |
 
 See [docs/SYNC-AND-TRIGGERS.md](docs/SYNC-AND-TRIGGERS.md) · [ONBOARDING.md](ONBOARDING.md).
 

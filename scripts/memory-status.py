@@ -233,13 +233,13 @@ def skills_stats(memory_home: Path, framework_root: Path | None) -> dict:
     }
 
 
-def verify_summary(memory_home: Path, handoff: Path | None) -> tuple[int, int] | None:
+def verify_summary(memory_home: Path) -> tuple[int, int] | None:
     vm = load_script_module("verify_memory", "verify-memory.py")
-    results, _warnings = vm.run_checks_for_hub(memory_home, handoff=handoff)
+    results, _warnings = vm.run_checks_for_hub(memory_home)
     return vm.summarize_results(results)
 
 
-def collect(memory_home: Path, framework_root: Path | None, handoff: Path | None) -> dict:
+def collect(memory_home: Path, framework_root: Path | None) -> dict:
     wins = memory_home / "feedback" / "wins.md"
     fails = memory_home / "feedback" / "fails.md"
     gc = memory_home / "context" / "GLOBAL_CONTEXT.md"
@@ -280,7 +280,7 @@ def collect(memory_home: Path, framework_root: Path | None, handoff: Path | None
         "skills_hub": len(list((memory_home / "skills").iterdir())) if (memory_home / "skills").is_dir() else 0,
         "skills": skills_stats(memory_home, framework_root),
         "rotation": rotation_warnings(memory_home, ROTATE_LINES),
-        "verify": verify_summary(memory_home, handoff),
+        "verify": verify_summary(memory_home),
         "config": load_hub_config(memory_home),
     }
 
@@ -370,7 +370,6 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--memory-home", help="Override hub path (default: config/env)")
     parser.add_argument("--framework-root", help="Override framework clone path")
-    parser.add_argument("--handoff", help="Optional AGENT_HANDOFF.md for verify summary")
     parser.add_argument("--brief", action="store_true", help="One-line summary")
     parser.add_argument("--json", action="store_true", help="Machine-readable output")
     parser.add_argument("--no-verify", action="store_true", help="Skip verify-memory summary")
@@ -380,14 +379,14 @@ def main() -> int:
     framework_root = resolve_framework_root(
         memory_home, args.framework_root, script_file=__file__
     )
-    handoff = Path(args.handoff).expanduser() if args.handoff else None
-
     if not memory_home.is_dir():
         print(f"Memory hub not found: {memory_home}", file=sys.stderr)
         print("Run: bash scripts/init-memory.sh", file=sys.stderr)
         return 1
 
-    data = collect(memory_home, framework_root, handoff if not args.no_verify else None)
+    data = collect(memory_home, framework_root)
+    if args.no_verify:
+        data["verify"] = None
 
     if args.json:
         print(json.dumps(data, indent=2))

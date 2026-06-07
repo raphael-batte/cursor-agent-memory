@@ -24,7 +24,7 @@ In Cursor with `@agent-memory`: **sync with agent memory**. Reload window after 
 Manual:
 
 ```bash
-python3 scripts/sync-memory.py --days 180 --handoff-mode optional
+python3 scripts/sync-memory.py --days 180
 ```
 
 Paths are written to `$MEMORY_HOME/config.json` on init/link/sync — no `~/.config` files created.
@@ -34,8 +34,7 @@ Example `$MEMORY_HOME/config.json`:
 ```json
 {
   "framework_root": "/path/to/install-clone",
-  "memory_home": "/path/to/install-clone/memory",
-  "handoff_mode": "optional"
+  "memory_home": "/path/to/install-clone/memory"
 }
 ```
 
@@ -103,13 +102,9 @@ Framework: `git pull` in `$FRAMEWORK_ROOT` separately. Never push secrets — ru
 
 ---
 
-## 6. Per-repo handoff (optional)
+## 6. Forward pointer (replaces handoff)
 
-When `handoff_mode` is not `off`:
-
-```bash
-cp "$FRAMEWORK_ROOT/templates/repo-handoff/AGENT_HANDOFF.md" /path/to/repo/
-```
+`chats/projects/<slug>.md` **## Next step** is updated automatically on boundary distills (`lib/forward_pointer.py`). Legacy `AGENT_HANDOFF.md` in repos is ignored by the framework — migrate next-step text into distill or delete handoff files.
 
 ---
 

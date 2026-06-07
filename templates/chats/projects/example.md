@@ -11,6 +11,10 @@ One paragraph: what this project is about in your conversations.
 
 - 
 
+## Next step
+
+- (auto-updated on distill from transcript tail — forward pointer for session start)
+
 ## Preferences
 
 - 

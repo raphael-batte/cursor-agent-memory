@@ -19,7 +19,6 @@ from lib.memory_config import (  # noqa: E402
     resolve_framework_root,
     resolve_memory_home,
 )
-from lib.memory_routing import load_handoff_mode  # noqa: E402
 
 
 def load_script(name: str, filename: str):
@@ -38,7 +37,6 @@ def run_doctor(
     *,
     memory_home: Path,
     framework_root: Path | None,
-    handoff: Path | None,
     strict_secrets: bool,
     gitleaks: bool = False,
 ) -> dict:
@@ -51,7 +49,6 @@ def run_doctor(
     processed, pending, total = lc.chat_counts(memory_home)
     results, warnings = vm.run_checks_for_hub(
         memory_home,
-        handoff=handoff,
         strict_secrets=strict_secrets,
         gitleaks=gitleaks,
     )
@@ -76,7 +73,6 @@ def run_doctor(
             "personal_linked": skills["personal_linked"],
             "unlinked": skills["unlinked"],
         },
-        "handoff_mode": load_handoff_mode(memory_home),
         "path_resolution": (
             "CLI --memory-home > $MEMORY_HOME env > <clone>/memory; "
             "framework_root from hub parent or memory/config.json"
@@ -88,7 +84,6 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--memory-home")
     parser.add_argument("--framework-root")
-    parser.add_argument("--handoff")
     parser.add_argument("--strict-secrets", action="store_true")
     parser.add_argument("--gitleaks", action="store_true")
     parser.add_argument(
@@ -104,8 +99,6 @@ def main() -> int:
     framework_root = resolve_framework_root(
         memory_home, args.framework_root, script_file=__file__
     )
-    handoff = Path(args.handoff).expanduser() if args.handoff else None
-
     if args.fix or args.fix_dry_run:
         if framework_root is None:
             print("Error: --fix requires resolvable framework_root", file=sys.stderr)
@@ -128,7 +121,6 @@ def main() -> int:
     report = run_doctor(
         memory_home=memory_home,
         framework_root=framework_root,
-        handoff=handoff,
         strict_secrets=args.strict_secrets,
         gitleaks=args.gitleaks,
     )

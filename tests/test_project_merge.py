@@ -87,6 +87,27 @@ class TestProjectMerge(unittest.TestCase):
             self.assertEqual(result["decisions_added"], 0)
             self.assertNotIn("[bootstrap]", path.read_text(encoding="utf-8"))
 
+    def test_apply_sets_next_step_from_extract(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            jsonl = Path(tmp) / "c.jsonl"
+            jsonl.write_text(
+                '{"role":"assistant","message":{"content":[{"type":"text",'
+                '"text":"Done.\\n\\nNext step: run device QA script"}]}}\n',
+                encoding="utf-8",
+            )
+            extract = {
+                "uuid": "x",
+                "workspace_slug": "app",
+                "user_messages": [],
+                "user_message_count": 0,
+                "strategy": "tail",
+                "source_path": str(jsonl),
+            }
+            path = Path(tmp) / "app.md"
+            path.write_text("## Next step\n\n\n## Recent\n\n", encoding="utf-8")
+            pm.apply_extract_to_project(path, extract, today="2026-06-07")
+            self.assertIn("device QA", path.read_text(encoding="utf-8"))
+
     def test_apply_leaves_summary_empty(self) -> None:
         extract = {
             "uuid": "x",

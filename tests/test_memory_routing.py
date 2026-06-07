@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import sys
-import tempfile
 import unittest
 from pathlib import Path
 
@@ -14,35 +13,19 @@ from lib import memory_routing as mr  # noqa: E402
 
 
 class TestMemoryRouting(unittest.TestCase):
-    def test_off_mode_skips_handoff(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            (root / "AGENT_HANDOFF.md").write_text(
-                "## Next Step\n\nDo thing\n", encoding="utf-8"
-            )
-            layers = mr.session_read_layers(
-                handoff_mode="off",
-                workspace_roots=[str(root)],
-                workspace_slug="app",
-            )
-            self.assertEqual(layers, ["distill"])
+    def test_known_slug_distill_only(self) -> None:
+        layers = mr.session_read_layers(workspace_slug="app")
+        self.assertEqual(layers, ["distill"])
 
-    def test_optional_with_next_step(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            (root / "AGENT_HANDOFF.md").write_text(
-                "## Next Step\n\nShip v2\n", encoding="utf-8"
-            )
-            layers = mr.session_read_layers(
-                handoff_mode="optional",
-                workspace_roots=[str(root)],
-                workspace_slug="app",
-            )
-            self.assertEqual(layers[0], "handoff")
+    def test_unknown_slug_adds_global(self) -> None:
+        layers = mr.session_read_layers(workspace_slug=None)
+        self.assertEqual(layers, ["distill", "global-context"])
 
-    def test_normalize_handoff_mode(self) -> None:
-        self.assertEqual(mr.normalize_handoff_mode("OFF"), "off")
-        self.assertEqual(mr.normalize_handoff_mode(None), "optional")
+    def test_routing_summary(self) -> None:
+        with __import__("tempfile").TemporaryDirectory() as tmp:
+            hub = Path(tmp)
+            summary = mr.routing_summary(hub)
+            self.assertEqual(summary["memory_home"], str(hub))
 
 
 if __name__ == "__main__":

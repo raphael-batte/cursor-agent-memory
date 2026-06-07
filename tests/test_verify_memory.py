@@ -59,7 +59,7 @@ class TestVerifyMemory(unittest.TestCase):
     def test_run_checks_for_hub_tuple(self) -> None:
         minimal_hub(self.hub, projects=2)
         results, warnings = vm.run_checks_for_hub(self.hub)
-        self.assertGreaterEqual(len(results), 8)
+        self.assertGreaterEqual(len(results), 7)
         self.assertIsInstance(warnings, list)
 
     def test_duplicate_lesson_warning(self) -> None:
