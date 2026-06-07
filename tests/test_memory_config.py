@@ -188,6 +188,42 @@ class TestMemoryConfig(unittest.TestCase):
             self.assertTrue(mc.is_dev_project(dev))
             self.assertFalse(mc.is_dev_project(install))
 
+    def test_resolve_install_root_from_dev_config_empty_install(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            dev = Path(tmp) / "dev"
+            install = Path(tmp) / "install"
+            dev.mkdir(parents=True)
+            install.mkdir(parents=True)
+            (dev / "INSTRUCTIONS.md").write_text("# dev", encoding="utf-8")
+            (dev / mc.DEV_CONFIG_NAME).write_text(
+                json.dumps({"install_root": str(install)}),
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                mc.resolve_install_root(dev_root=dev),
+                install.resolve(),
+            )
+
+    def test_dev_config_install_root_over_env(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            dev = Path(tmp) / "dev"
+            install = Path(tmp) / "install"
+            other = Path(tmp) / "other"
+            for root in (dev, install, other):
+                root.mkdir(parents=True)
+                (root / "INSTRUCTIONS.md").write_text("# x", encoding="utf-8")
+            (dev / mc.DEV_CONFIG_NAME).write_text(
+                json.dumps({"install_root": str(install)}),
+                encoding="utf-8",
+            )
+            with mock.patch.dict(
+                os.environ, {"AGENT_MEMORY_FRAMEWORK": str(other)}
+            ):
+                self.assertEqual(
+                    mc.resolve_install_root(dev_root=dev),
+                    install.resolve(),
+                )
+
 
 if __name__ == "__main__":
     unittest.main()

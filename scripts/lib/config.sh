@@ -23,12 +23,26 @@ _valid_framework_dir() {
   echo "$(cd "$(eval echo "$path")" && pwd)"
 }
 
+_valid_install_dir() {
+  local path="$1"
+  [[ -n "$path" && -d "$(eval echo "$path")" ]] || return 1
+  echo "$(cd "$(eval echo "$path")" && pwd)"
+}
+
 resolve_install_root() {
   local override="${1:-}"
   local dev_root="${2:-${REPO_ROOT:-}}"
   local root=""
   if [[ -n "$override" ]]; then
-    root="$(_valid_framework_dir "$override")" && echo "$root" && return
+    root="$(_valid_framework_dir "$override")" || root="$(_valid_install_dir "$override")"
+    [[ -n "$root" ]] && echo "$root" && return
+  fi
+  if [[ -f "${dev_root}/${DEV_CONFIG_NAME}" ]]; then
+    local from_cfg
+    from_cfg="$(_read_install_from_dev_config "$dev_root" 2>/dev/null || true)"
+    if [[ -n "$from_cfg" ]]; then
+      root="$(_valid_install_dir "$from_cfg")" && echo "$root" && return
+    fi
   fi
   for var in AGENT_MEMORY_INSTALL AGENT_MEMORY_FRAMEWORK FRAMEWORK_ROOT; do
     if [[ -n "${!var:-}" ]]; then
@@ -40,11 +54,6 @@ resolve_install_root() {
     # shellcheck disable=SC1090
     source "$env_file"
     root="$(_valid_framework_dir "${AGENT_MEMORY_FRAMEWORK:-}")" && echo "$root" && return
-  fi
-  if [[ -f "${dev_root}/INSTRUCTIONS.md" ]]; then
-    local from_cfg
-    from_cfg="$(_read_install_from_dev_config "$dev_root" 2>/dev/null || true)"
-    root="$(_valid_framework_dir "$from_cfg")" && echo "$root" && return
   fi
   echo ""
 }

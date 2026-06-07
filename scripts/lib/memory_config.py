@@ -62,7 +62,7 @@ def dev_config_install_root(dev_root: Path | None) -> Path | None:
         return None
     cfg = _read_json(dev_root / DEV_CONFIG_NAME)
     raw = str(cfg.get("install_root", "")).strip()
-    return _valid_framework_dir(raw)
+    return _valid_install_dir(raw)
 
 
 def resolve_install_root(
@@ -74,9 +74,13 @@ def resolve_install_root(
     Cursor-connected install clone (install_root in dev.config.json or env).
     Dev project is separate — see dev.config.json.
     """
-    found = _valid_framework_dir(override or "")
+    found = _valid_framework_dir(override or "") or _valid_install_dir(override or "")
     if found:
         return found
+    if dev_root is not None and (dev_root / DEV_CONFIG_NAME).is_file():
+        from_dev = dev_config_install_root(dev_root)
+        if from_dev is not None:
+            return from_dev
     for key in ("AGENT_MEMORY_INSTALL", "AGENT_MEMORY_FRAMEWORK", "FRAMEWORK_ROOT"):
         found = _valid_framework_dir(os.environ.get(key, "").strip())
         if found:
@@ -85,11 +89,6 @@ def resolve_install_root(
     found = _valid_framework_dir(hook.get("AGENT_MEMORY_FRAMEWORK", ""))
     if found:
         return found
-    if dev_root is None:
-        return None
-    from_dev = dev_config_install_root(dev_root)
-    if from_dev is not None:
-        return from_dev
     return None
 
 
@@ -176,6 +175,15 @@ def _valid_framework_dir(path: str) -> Path | None:
         return None
     p = Path(path).expanduser()
     if p.is_dir() and (p / "INSTRUCTIONS.md").is_file():
+        return p.resolve()
+    return None
+
+
+def _valid_install_dir(path: str) -> Path | None:
+    if not path or not isinstance(path, str):
+        return None
+    p = Path(path).expanduser()
+    if p.is_dir():
         return p.resolve()
     return None
 

@@ -6,6 +6,12 @@ Data hub (`$MEMORY_HOME`) is **not** versioned with this file.
 
 ## [Unreleased]
 
+## [0.9.3] - 2026-06-07
+
+### Fixed
+
+- **`resolve_install_root`** — `dev.config.json` `install_root` wins over hook/env when running from dev clone; empty install dir (no `INSTRUCTIONS.md` yet) is valid — fixes CI `test_shell_scripts.sh` and local `sync-to-install --dry-run`
+
 ## [0.9.2] - 2026-06-07
 
 ### Added
