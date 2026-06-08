@@ -6,7 +6,11 @@ Read when user invokes **@agent-memory** (single entry skill).
 
 ---
 
-## Sync (first run)
+## Setup (first time)
+
+User says: **set up agent memory**. Run the wizard in `skills/agent-memory/SKILL.md` → Set up agent memory (hub path, scan, scope, verify).
+
+## Sync (refresh)
 
 User says: **sync with agent memory**. Ask: **180 days** (default) + optional **limit**. Run `sync-memory.py`. Report: Projects N · Distills M · Ready to work.
 

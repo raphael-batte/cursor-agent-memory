@@ -35,10 +35,11 @@ Anchor (fixed): `~/.cursor/agent-memory/config.json` → `{ "memory_home": "..."
 
 ## First run (`lib/first_run.py`)
 
-1. Idempotent `init-memory` + anchor
-2. Scan transcripts — auto-distill if ≤40 pending (90d), else `user_message` with scope presets
-3. Agent runs `first-run-scope.py` + `first-run-continue.py`
-4. Sentinel: `$MEMORY_HOME/.state/initialized`
+**Hook (passive):** idempotent `init-memory` + anchor; short `user_message` → `@agent-memory` **set up agent memory**. No auto-distill on hook.
+
+**Chat wizard (skill):** hub path → scan → scope presets → `first-run-scope.py` + `first-run-continue.py` → `verify-memory.py`.
+
+Sentinel: `$MEMORY_HOME/.state/initialized` (set by `first-run-continue` or existing manifest).
 
 ## sync-memory.py (manual batch)
 

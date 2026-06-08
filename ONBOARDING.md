@@ -27,14 +27,14 @@ Default hub: `~/.cursor/agent-memory/` (first `sessionStart` may prompt to reloc
 bash scripts/init-memory.sh   # optional — hooks also init idempotently
 ```
 
-### First run (automatic)
+### First run (hook + chat wizard)
 
 1. **Reload Cursor** after `install-local.sh`.
-2. Open any project — `sessionStart` runs first-run bootstrap.
-3. If many chats: agent asks scope → `first-run-scope.py` + `first-run-continue.py`.
-4. If few chats: auto-distill (90d, limit 40) → `Ready: N projects, M distills`.
+2. Open any project — `sessionStart` creates hub + anchor (short reminder in chat).
+3. Add **`@agent-memory`** → say **`set up agent memory`**.
+4. Agent asks: hub path (default / custom / migrate) → distill scope → runs verify.
 
-### Sync in Cursor (manual)
+### Sync in Cursor (after setup)
 
 1. Add **`@agent-memory`** in chat.
 2. Say: **`sync with agent memory`** — agent scans transcripts, asks period/limit if needed, runs sync.

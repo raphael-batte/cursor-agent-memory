@@ -1,6 +1,6 @@
 # Cursor Agent Memory
 
-**Version:** 0.12.4 — see [VERSIONING.md](VERSIONING.md)
+**Version:** 0.12.5 — see [VERSIONING.md](VERSIONING.md)
 Created by [raphaelbatte](https://github.com/raphael-batte) · [raphbatte.com](https://raphbatte.com)
 
 ## What this is
@@ -24,7 +24,7 @@ Agents load **one layer per task** (INDEX-first). Weak pointer → drill transcr
 bash scripts/install-local.sh    # from your clone → ~/.cursor/plugins/local/agent-memory
 ```
 
-**Reload Cursor** — first `sessionStart` bootstraps hub + anchor (or asks distill scope if you have many chats).
+**Reload Cursor** — first `sessionStart` creates hub + anchor. Then **`@agent-memory`** → **set up agent memory** (chat wizard).
 
 Optional manual init:
 

@@ -376,7 +376,12 @@ def handle_session_start(
         result["first_run"] = first_run
 
     fr_phase = (first_run or {}).get("first_run")
-    if fr_phase in ("complete", "awaiting_scope", "skipped_existing_data"):
+    if fr_phase in (
+        "complete",
+        "awaiting_scope",
+        "awaiting_setup",
+        "skipped_existing_data",
+    ):
         if first_run and first_run.get("user_message"):
             result["user_message"] = first_run["user_message"]
         result["catchup"] = {"status": "skipped", "reason": fr_phase}

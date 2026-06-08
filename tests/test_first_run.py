@@ -13,7 +13,6 @@ SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 from lib import first_run as fr  # noqa: E402
-from lib import memory_config as mc  # noqa: E402
 
 
 class TestFirstRun(unittest.TestCase):
@@ -41,7 +40,7 @@ class TestFirstRun(unittest.TestCase):
             fr.write_scope(hub, {"days": 7, "limit": None})
             self.assertEqual(fr.read_scope(hub), {"days": 7, "limit": None})
 
-    def test_handle_awaiting_scope_when_large(self) -> None:
+    def test_handle_awaiting_setup_without_auto_distill(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             plugin = Path(tmp) / "plugin"
             hub = Path(tmp) / "hub"
@@ -50,27 +49,24 @@ class TestFirstRun(unittest.TestCase):
             (plugin / "INSTRUCTIONS.md").write_text("#", encoding="utf-8")
             (plugin / ".cursor-plugin").mkdir()
             (plugin / ".cursor-plugin" / "plugin.json").write_text("{}", encoding="utf-8")
-            anchor = Path(tmp) / "anchor.json"
-            with mock.patch.object(mc, "ANCHOR_FILE", anchor):
-                with mock.patch.object(mc, "memory_home_from_anchor", return_value=hub):
-                    with mock.patch.object(fr, "ensure_hub", return_value={"status": "ok"}):
-                        with mock.patch.object(
-                            fr,
-                            "scan_chat_stats",
-                            return_value={
-                                "pending_90d": 80,
-                                "total_chats": 120,
-                                "pending_180d": 90,
-                                "active_90d": 80,
-                                "active_180d": 100,
-                            },
-                        ):
-                            out = fr.handle_first_run(
-                                memory_home=hub,
-                                plugin_root=plugin,
-                            )
-            self.assertEqual(out["first_run"], "awaiting_scope")
-            self.assertIn("first-run-scope.py", out["user_message"])
+            with mock.patch.object(fr, "ensure_hub", return_value={"status": "ok"}):
+                with mock.patch.object(
+                    fr,
+                    "scan_chat_stats",
+                    return_value={
+                        "pending_90d": 12,
+                        "total_chats": 50,
+                        "pending_180d": 20,
+                        "active_90d": 12,
+                        "active_180d": 20,
+                    },
+                ):
+                    out = fr.handle_first_run(
+                        memory_home=hub,
+                        plugin_root=plugin,
+                    )
+            self.assertEqual(out["first_run"], "awaiting_setup")
+            self.assertIn("set up agent memory", out["user_message"])
             self.assertFalse(fr.is_initialized(hub))
 
     def test_apply_mechanical_auto_decisions(self) -> None:

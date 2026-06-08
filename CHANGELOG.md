@@ -6,6 +6,14 @@ Data hub (`$MEMORY_HOME`) is **not** versioned with this file.
 
 ## [Unreleased]
 
+## [0.12.5] - 2026-06-08
+
+### Changed
+
+- **Onboarding** — hook only creates hub + short `user_message`; full wizard in skill (`set up agent memory`)
+- **SKILL.md** — steps: hub path / migrate → scan → scope → verify → optional GLOBAL_CONTEXT / Decisions
+- **first_run.py** — `awaiting_setup` replaces hook auto-distill and scope prompts
+
 ## [0.12.4] - 2026-06-08
 
 ### Changed

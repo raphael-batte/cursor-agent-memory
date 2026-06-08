@@ -10,12 +10,7 @@ from typing import Any
 
 from lib.chats_manifest import load_manifest, processed_by_id
 from lib.global_context_bootstrap import bootstrap_global_context
-from lib.memory_config import (
-    ANCHOR_FILE,
-    memory_home_from_anchor,
-    persist_paths,
-    resolve_plugin_root,
-)
+from lib.memory_config import persist_paths, resolve_plugin_root
 from lib.pending_chats import list_chats_needing_distill, scan_chat_stats
 from lib.project_merge import apply_mechanical_auto_decisions
 
@@ -36,21 +31,13 @@ SCOPE_PRESETS: dict[str, dict[str, int | None]] = {
     "new-only": {"days": 180, "limit": 15},
 }
 
-HUB_PROMPT = """[agent-memory] First run — memory hub location (default already applied).
+SETUP_HOOK_MESSAGE = """[agent-memory] Hub ready at {hub}
 
-Current hub: {hub}
-Anchor: {anchor}
+Complete setup in chat: @agent-memory → **set up agent memory**
 
-Optional relocate before large distill:
-1. Keep default (~/.cursor/agent-memory)
-2. ~/Documents/agent-memory — run: MEMORY_HOME=~/Documents/agent-memory bash scripts/init-memory.sh
-3. Custom path — run: MEMORY_HOME=/your/path bash scripts/init-memory.sh
+(Custom hub path or migrate from an old hub — answer in that chat; agent runs init/migrate/doctor.)"""
 
-If happy with current hub, set distill scope:
-  python3 scripts/first-run-scope.py --preset 7d|90d-30|180d-all|new-only
-Then: python3 scripts/first-run-continue.py"""
-
-SCOPE_PROMPT = """[agent-memory] First run — choose distill scope ({pending_90d} pending in 90d, {total} total chats).
+SCOPE_PROMPT = """[agent-memory] Choose distill scope ({pending_90d} pending in 90d, {total} total chats).
 
 Presets:
   7d        — last 7 days
@@ -123,11 +110,8 @@ def recommend_scope(scan: dict[str, Any]) -> dict[str, Any] | None:
     return dict(AUTO_SCOPE)
 
 
-def hub_location_prompt(memory_home: Path) -> str:
-    return HUB_PROMPT.format(
-        hub=str(memory_home.resolve()),
-        anchor=str(ANCHOR_FILE),
-    )
+def setup_hook_message(memory_home: Path) -> str:
+    return SETUP_HOOK_MESSAGE.format(hub=str(memory_home.resolve()))
 
 
 def scope_prompt(scan: dict[str, Any]) -> str:
@@ -316,15 +300,11 @@ def handle_first_run(
     }
     messages: list[str] = []
 
-    had_anchor = memory_home_from_anchor() is not None
     ensure = ensure_hub(plugin, memory_home)
     result["init"] = ensure
     if ensure.get("status") == "error":
         result["user_message"] = "[agent-memory] init-memory failed — check Python and logs"
         return result
-
-    if not had_anchor:
-        messages.append(hub_location_prompt(memory_home))
 
     manifest = load_manifest(memory_home / "chats" / "manifest.json")
     if processed_by_id(manifest):
@@ -341,31 +321,9 @@ def handle_first_run(
         result["user_message"] = "\n\n".join(messages)
         return result
 
-    scope = read_scope(memory_home)
     scan = scan_chat_stats(memory_home, projects_root=projects_root)
     result["scan"] = scan
-
-    if scope is None:
-        scope = recommend_scope(scan)
-        if scope is None:
-            messages.append(scope_prompt(scan))
-            result["first_run"] = "awaiting_scope"
-            result["user_message"] = "\n\n".join(messages) if messages else scope_prompt(scan)
-            return result
-
-    batch = run_distill_batch(
-        memory_home, scope, plugin_root=plugin, projects_root=projects_root
-    )
-    result["batch"] = batch
-    stats = {
-        "memory_home": str(memory_home),
-        "distilled": batch.get("distilled", 0),
-        "auto_fallback": batch.get("auto_fallback", 0),
-        "projects": batch.get("projects", 0),
-        "scope": scope,
-    }
-    mark_initialized(memory_home, stats)
-    result["first_run"] = "complete"
-    messages.append(ready_message(stats))
+    messages.append(setup_hook_message(memory_home))
+    result["first_run"] = "awaiting_setup"
     result["user_message"] = "\n\n".join(messages)
     return result
