@@ -6,6 +6,18 @@ Data hub (`$MEMORY_HOME`) is **not** versioned with this file.
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-06-08
+
+### Added
+
+- **validate-plugin.mjs** — single-plugin marketplace structure check (manifest, skills frontmatter, hook scripts); runs in CI and `run-tests.sh`
+
+### Changed
+
+- **plugin.json** — `displayName`, `category`, `tags`, explicit `skills`/`hooks` paths, marketplace description
+- **hooks.json** — `"version": 1`
+- **Naming** — README and ARCHITECTURE use **Agent Memory** (no Cursor prefix in display name)
+
 ## [0.12.6] - 2026-06-08
 
 ### Fixed

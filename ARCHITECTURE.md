@@ -1,4 +1,4 @@
-# Architecture — Cursor Agent Memory
+# Architecture — Agent Memory
 
 Human-oriented overview. Runtime protocol for agents: [INSTRUCTIONS.md](INSTRUCTIONS.md).
 

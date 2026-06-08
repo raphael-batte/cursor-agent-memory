@@ -1,14 +1,32 @@
 {
   "name": "agent-memory",
-  "version": "0.12.6",
-  "description": "Durable agent memory for Cursor — routed layers, chat distill, forward pointer. Secrets redaction on extract; verify-memory + gitleaks guard the hub. Data lives outside the bundle.",
+  "displayName": "Agent Memory",
+  "version": "0.13.0",
+  "description": "Keeps durable agent context in a private hub outside the plugin bundle — global context, feedback, and distilled chat history with a Next step forward pointer. Hooks update memory on session boundaries; secrets are redacted on distill.",
   "author": {
-    "name": "raphaelbatte",
-    "email": ""
+    "name": "raphaelbatte"
   },
   "homepage": "https://github.com/raphael-batte/cursor-agent-memory",
   "repository": "https://github.com/raphael-batte/cursor-agent-memory",
   "license": "MIT",
-  "keywords": ["memory", "context", "distill", "agent", "cursor", "security", "secrets", "gitleaks"],
-  "logo": "assets/logo.svg"
+  "keywords": [
+    "memory",
+    "context",
+    "distill",
+    "agent",
+    "cursor",
+    "transcripts",
+    "hooks",
+    "security"
+  ],
+  "category": "developer-tools",
+  "tags": [
+    "memory",
+    "context",
+    "automation",
+    "transcripts"
+  ],
+  "logo": "assets/logo.svg",
+  "skills": "./skills/",
+  "hooks": "./hooks/hooks.json"
 }
