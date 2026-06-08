@@ -21,17 +21,23 @@ bash scripts/install-local.sh
 | Reload Cursor | Plugin discovers skills + hooks from bundle |
 | `init-memory.sh` | Creates hub + anchor (idempotent; never overwrites user data) |
 
-Default hub: `~/.cursor/agent-memory/` (override via anchor — Phase B will ask on first run).
+Default hub: `~/.cursor/agent-memory/` (first `sessionStart` may prompt to relocate via agent).
 
 ```bash
-bash scripts/init-memory.sh
+bash scripts/init-memory.sh   # optional — hooks also init idempotently
 ```
 
-### Sync in Cursor
+### First run (automatic)
 
-1. Open any project in Cursor.
-2. Add **`@agent-memory`** in chat.
-3. Say: **`sync with agent memory`** — agent scans transcripts (~180 days by default), asks period/limit, runs sync.
+1. **Reload Cursor** after `install-local.sh`.
+2. Open any project — `sessionStart` runs first-run bootstrap.
+3. If many chats: agent asks scope → `first-run-scope.py` + `first-run-continue.py`.
+4. If few chats: auto-distill (90d, limit 40) → `Ready: N projects, M distills`.
+
+### Sync in Cursor (manual)
+
+1. Add **`@agent-memory`** in chat.
+2. Say: **`sync with agent memory`** — agent scans transcripts, asks period/limit if needed, runs sync.
 
 ### What sync + hooks do automatically
 

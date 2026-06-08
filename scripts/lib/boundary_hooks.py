@@ -353,7 +353,7 @@ def handle_session_start(
     memory_home: Path,
     projects_root: Path = DEFAULT_PROJECTS_ROOT,
 ) -> dict[str, Any]:
-    """sessionStart — catch-up distill + pointer queue reminder."""
+    """sessionStart — first-run bootstrap, catch-up distill, pointer queue."""
     _record_metric(
         memory_home,
         {
@@ -364,10 +364,34 @@ def handle_session_start(
             ),
         },
     )
+    from lib.first_run import handle_first_run, is_initialized
+
+    first_run = handle_first_run(
+        memory_home=memory_home,
+        projects_root=projects_root,
+        script_file=SCRIPT_DIR / "boundary-hooks.py",
+    )
+    result: dict[str, Any] = {}
+    if first_run is not None:
+        result["first_run"] = first_run
+
+    fr_phase = (first_run or {}).get("first_run")
+    if fr_phase in ("complete", "awaiting_scope", "skipped_existing_data"):
+        if first_run and first_run.get("user_message"):
+            result["user_message"] = first_run["user_message"]
+        result["catchup"] = {"status": "skipped", "reason": fr_phase}
+        return result
+
+    if not is_initialized(memory_home):
+        if first_run and first_run.get("user_message"):
+            result["user_message"] = first_run["user_message"]
+        result["catchup"] = {"status": "skipped", "reason": "first_run_pending"}
+        return result
+
     catchup = run_session_start_catchup(
         payload, memory_home=memory_home, projects_root=projects_root
     )
-    result: dict[str, Any] = {"catchup": catchup}
+    result["catchup"] = catchup
     msg = session_start_user_message(
         memory_home, payload.get("workspace_roots") or []
     )

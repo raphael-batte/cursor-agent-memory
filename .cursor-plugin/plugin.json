@@ -1,6 +1,6 @@
 {
   "name": "agent-memory",
-  "version": "0.12.0",
+  "version": "0.12.1",
   "description": "Durable agent memory for Cursor — distill chats, forward pointer, routed context layers. Hub lives outside the bundle.",
   "author": {
     "name": "raphaelbatte",

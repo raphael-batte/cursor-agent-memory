@@ -1,6 +1,6 @@
 # Cursor Agent Memory
 
-**Version:** 0.12.0 — see [VERSIONING.md](VERSIONING.md)
+**Version:** 0.12.1 — see [VERSIONING.md](VERSIONING.md)
 Created by [raphaelbatte](https://github.com/raphael-batte) · [raphbatte.com](https://raphbatte.com)
 
 ## What this is

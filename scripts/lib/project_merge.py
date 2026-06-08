@@ -12,6 +12,7 @@ from lib.forward_pointer import (
     STALE_POINTER_PREFIX,
     extract_forward_pointer_result,
 )
+from lib.message_importance import mechanical_bullets
 from lib.secrets_guard import scan_file
 from lib.timestamps import now_iso
 
@@ -170,6 +171,36 @@ def decision_candidates_from_extract(
         if len(out) >= max_items:
             break
     return out
+
+
+def apply_mechanical_auto_decisions(project_path: Path, extract: dict) -> int:
+    """Graceful first-run fallback — keyword-free [auto] Decisions bullets."""
+    bullets = mechanical_bullets(extract.get("user_messages") or [], max_items=3)
+    if not bullets:
+        return 0
+    seeds = [f"[auto] {b}" for b in bullets]
+    project_path.parent.mkdir(parents=True, exist_ok=True)
+    day = _today()
+    if project_path.is_file():
+        text = project_path.read_text(encoding="utf-8", errors="replace")
+    else:
+        slug = extract.get("workspace_slug", "project")
+        text = (
+            f"# {slug}\n"
+            f"_Last updated: {day}_\n\n"
+            "## Summary\n\n\n"
+            "## Decisions\n\n\n"
+            "## Next step\n\n\n"
+            "## Preferences\n\n\n"
+            "## Open threads\n\n\n"
+            "## Recent\n\n"
+        )
+    preamble, sections = _parse_sections(text)
+    if _bullets(sections.get("Decisions", "")):
+        return 0
+    sections["Decisions"] = _format_bullets(seeds)
+    project_path.write_text(_join_sections(preamble, sections), encoding="utf-8")
+    return len(seeds)
 
 
 def apply_extract_to_project(

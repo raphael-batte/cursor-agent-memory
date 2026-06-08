@@ -6,6 +6,22 @@ Data hub (`$MEMORY_HOME`) is **not** versioned with this file.
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-06-08
+
+### Added
+
+- **First-run sentinel** — `$MEMORY_HOME/.state/initialized`; survives plugin updates
+- **`lib/first_run.py`** — hub init, scan, scope presets, batch distill on `sessionStart` / `workspaceOpen`
+- **`first-run-scope.py`** / **`first-run-continue.py`** — agent-orchestrated scope + continue after user choice
+- **`[auto]` Decisions fallback** — `apply_mechanical_auto_decisions()` when distill fails on first run
+- **Auto scope** — ≤40 pending (90d) → distill without prompt; larger libraries → `user_message` with presets
+
+### Changed
+
+- **`handle_session_start`** — first-run before catch-up; skips catch-up while awaiting scope
+- **`hooks/hooks.json`** — `workspaceOpen` → same handler as `sessionStart`
+- **ONBOARDING / SKILL** — first-run flow documented
+
 ## [0.12.0] - 2026-06-08
 
 ### Added

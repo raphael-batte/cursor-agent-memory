@@ -5,6 +5,11 @@
         "command": "./hooks/agent-memory-session-start.sh"
       }
     ],
+    "workspaceOpen": [
+      {
+        "command": "./hooks/agent-memory-session-start.sh"
+      }
+    ],
     "preCompact": [
       {
         "command": "./hooks/agent-memory-boundary.sh"
