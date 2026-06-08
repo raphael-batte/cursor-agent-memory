@@ -1,30 +1,34 @@
 # Agent Memory
 
-**Version:** 0.13.0 — see [VERSIONING.md](VERSIONING.md)
-Created by [raphaelbatte](https://github.com/raphael-batte) · [raphbatte.com](https://raphbatte.com)
-
 ## What this is
 
-**Cursor forgets between sessions.** One `@agent-memory` skill, a private hub outside the plugin bundle, and routed layers — not a notes dump.
+Cursor forgets everything when a session ends. This plugin gives it persistent memory across three layers:
 
-- **Global context** — who you are, which projects, cross-repo rules, infra
-- **Feedback** — what worked (+) and what to stop proposing (−)
-- **Chat memory** — distilled transcripts + **`## Next step`** forward pointer (auto on hooks)
-- **Security** — redact secrets on distill; `verify-memory` scans the hub (regex + optional gitleaks); CI runs gitleaks on every push
+- **Who you are** — global context, projects, cross-repo rules
+- **What worked** — feedback on good and bad agent decisions
+- **Where you left off** — distilled chat history with a **Next step** pointer, updated automatically
 
-Agents load **one layer per task** (INDEX-first). Weak pointer → drill transcript via `[title](uuid)` in distill (never bulk jsonl).
-
-**Cursor plugin** — code in the bundle; hub + anchor live **outside** it and survive updates. MIT license.
+Memory lives in private files outside the plugin bundle and survives updates. Secrets are redacted on every distill.
 
 → [ONBOARDING.md](ONBOARDING.md) · [ARCHITECTURE.md](ARCHITECTURE.md) · [INSTRUCTIONS.md](INSTRUCTIONS.md) · [MIGRATION.md](MIGRATION.md)
 
-## Quick start
+## Installation
+
+When listed on Cursor Marketplace:
 
 ```bash
-bash scripts/install-local.sh    # from your clone → ~/.cursor/plugins/local/agent-memory
+/add-plugin agent-memory
 ```
 
-**Reload Cursor** — first `sessionStart` creates hub + anchor. Then **`@agent-memory`** → **set up agent memory** (chat wizard).
+From a clone (development or pre-marketplace):
+
+```bash
+git clone https://github.com/raphael-batte/cursor-agent-memory.git
+cd cursor-agent-memory
+bash scripts/install-local.sh
+```
+
+Then **reload the Cursor window**. First open of a project creates the hub and anchor. In chat: **`@agent-memory`** → **set up agent memory**.
 
 Optional manual init:
 
@@ -32,11 +36,17 @@ Optional manual init:
 bash scripts/init-memory.sh      # idempotent; custom MEMORY_HOME via env
 ```
 
-In chat: **`@agent-memory`** → **sync with agent memory** (manual refresh anytime).
+Manual refresh anytime: **`@agent-memory`** → **sync with agent memory**.
 
-**New users:** [github.com/raphael-batte/cursor-agent-memory](https://github.com/raphael-batte/cursor-agent-memory) — clone, then `install-local.sh` above.
+## How it works
 
-## Three locations
+On session boundaries (`preCompact`, `sessionEnd`), hooks run incremental distill: scan new or changed Cursor transcripts, redact secrets, update the manifest, and write project summaries with a **`## Next step`** forward pointer.
+
+On first install, `sessionStart` creates hub template files and an anchor config outside the plugin bundle. Full setup — hub path, migrate from backup, first distill scope — runs in chat via the skill wizard.
+
+The skill routes the agent to the right memory layer per task (global context, feedback, or project chat distill). Agents follow **`## Next step`** in project files to know where to continue; weak pointers link back to the source chat.
+
+## Where data lives
 
 | Entity | Path | On plugin update |
 |--------|------|------------------|
@@ -44,9 +54,58 @@ In chat: **`@agent-memory`** → **sync with agent memory** (manual refresh anyt
 | **Anchor** | `~/.cursor/agent-memory/config.json` | survives |
 | **Hub** | from anchor (default `~/.cursor/agent-memory/`) | survives |
 
-`MEMORY_HOME`: CLI `--memory-home` → env → anchor → default.
+Resolve order for `MEMORY_HOME`: CLI `--memory-home` → env → anchor → default.
 
-## How layers connect
+Runtime state (examples):
+
+- `$MEMORY_HOME/chats/manifest.json` — processed transcript index
+- `$MEMORY_HOME/chats/merge-staging/` — distill candidates per chat
+- `$MEMORY_HOME/.state/initialized` — first-run sentinel
+
+## Trigger cadence
+
+| Event | What happens |
+|-------|----------------|
+| `sessionStart` / `workspaceOpen` | Hub + anchor init; short setup reminder if not initialized |
+| `preCompact` / `sessionEnd` | Incremental distill (debounced, default 30s) |
+| `afterFileEdit` | Tracks hub file edits for apply-guard |
+| Manual | `@agent-memory` → **sync with agent memory** |
+
+Distill runs only when transcripts are new or changed (manifest + file mtime). First bulk sync scope is chosen during setup (e.g. last 90 days).
+
+## Optional env overrides
+
+| Variable | Purpose |
+|----------|---------|
+| `MEMORY_HOME` | Override hub directory |
+| `AGENT_MEMORY_FRAMEWORK` | Override plugin bundle path (advanced) |
+| `AGENT_MEMORY_BOUNDARY_LOG` | Boundary hook log path |
+| `AGENT_MEMORY_SESSION_START_LOG` | Session-start hook log path |
+| `AGENT_MEMORY_SESSION_LOG` | Session-end hook log path |
+
+## Output format in the hub
+
+**Global context** — `$MEMORY_HOME/context/GLOBAL_CONTEXT.md`  
+Who you are, active projects, cross-repo rules, infra notes.
+
+**Feedback** — `$MEMORY_HOME/feedback/`  
+What worked (`wins.md`) and what to stop proposing (`fails.md`).
+
+**Chat memory** — `$MEMORY_HOME/chats/projects/<slug>.md`  
+Each file includes:
+
+- **`## Recent`** — distilled transcript summary
+- **`## Next step`** — forward pointer (where to continue)
+- **`## Decisions`** — durable choices (when present)
+
+## Security
+
+- Secrets are **redacted on distill** before anything is written to the hub
+- **`verify-memory`** scans the hub (regex patterns + optional gitleaks)
+- CI runs gitleaks on every push to the framework repo
+- Never store credentials in memory files — treat the hub as sensitive local data
+
+## Schema
 
 ```mermaid
 flowchart TB
@@ -70,23 +129,16 @@ flowchart TB
   FB --> AG
 ```
 
-| Layer | Location |
-|-------|----------|
-| Global context | `$MEMORY_HOME/context/` |
-| Feedback | `feedback/`, `preferences.md` |
-| Chat memory | `chats/projects/<slug>.md` |
-
 ## What's in the bundle
 
 | Area | Contents |
 |------|----------|
-| Skill | `skills/agent-memory/SKILL.md` |
-| Hooks | `hooks/hooks.json` — sessionStart, sessionEnd, preCompact |
+| Skills | `skills/agent-memory/`, `skills/semantic-merge/` |
+| Hooks | `hooks/hooks.json` — sessionStart, sessionEnd, preCompact, afterFileEdit |
 | Scripts | distill, sync, verify, doctor, first-run |
 | Templates | hub scaffolds (materialized into `$MEMORY_HOME`) |
-| CI | tests, version-check, gitleaks; Release on `v*` tag |
 
-**Tests:** `bash tests/run-tests.sh` (160+ checks).
+**Tests:** `bash tests/run-tests.sh` (170+ checks).
 
 ## Common commands
 
@@ -105,3 +157,7 @@ If you used symlink skills or global `~/.cursor/hooks.json` entries before the p
 ## License
 
 [MIT](LICENSE) — [CONTRIBUTING.md](CONTRIBUTING.md): PR → `main`.
+
+Created by [raphaelbatte](https://github.com/raphael-batte) · [raphbatte.com](https://raphbatte.com)
+
+**Version:** 0.13.0 — see [VERSIONING.md](VERSIONING.md)
