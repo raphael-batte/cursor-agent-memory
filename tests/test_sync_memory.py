@@ -50,7 +50,7 @@ class TestSyncMemory(unittest.TestCase):
             self.assertIn("pending_90d", stats)
             self.assertIn("pending_180d", stats)
 
-    def test_sync_without_handoff_mode(self) -> None:
+    def test_sync_hub_config_has_no_legacy_handoff_mode(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             hub = Path(tmp) / "hub"
             minimal_hub(hub, projects=1)

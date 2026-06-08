@@ -1,0 +1,14 @@
+{
+  "name": "agent-memory",
+  "version": "0.12.0",
+  "description": "Durable agent memory for Cursor — distill chats, forward pointer, routed context layers. Hub lives outside the bundle.",
+  "author": {
+    "name": "raphaelbatte",
+    "email": ""
+  },
+  "homepage": "https://github.com/raphael-batte/cursor-agent-memory",
+  "repository": "https://github.com/raphael-batte/cursor-agent-memory",
+  "license": "MIT",
+  "keywords": ["memory", "context", "distill", "agent", "cursor"],
+  "logo": "assets/logo.svg"
+}

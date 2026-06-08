@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Install Cursor user hooks for agent-memory (sessionStart / boundary / sessionEnd / afterFileEdit).
-# Template names match hooks.json entries (no rename on install).
+# LEGACY: merge hooks into ~/.cursor/hooks.json — plugin bundle provides hooks/hooks.json.
 set -euo pipefail
+
+echo "[agent-memory] deprecated: plugin hooks in hooks/ — use install-local.sh" >&2
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"

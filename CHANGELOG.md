@@ -6,6 +6,27 @@ Data hub (`$MEMORY_HOME`) is **not** versioned with this file.
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-06-08
+
+### Added
+
+- **Cursor plugin shell** — `.cursor-plugin/plugin.json`, `hooks/hooks.json`, `skills/agent-memory/SKILL.md`
+- **Fixed anchor** — `~/.cursor/agent-memory/config.json` (`memory_home` only; survives bundle updates)
+- **External hub** — default `~/.cursor/agent-memory/`; templates materialize into hub, not bundle
+- **`install-local.sh`** — delivery only (symlink + reload); no bootstrap in installer
+- **`detect_plugin_root()`** — walk up to `.cursor-plugin/plugin.json` (location-agnostic)
+
+### Changed
+
+- **Path resolution** — `MEMORY_HOME`: CLI → env → anchor → default; `PLUGIN_ROOT` from bundle detect
+- **`init-memory.sh`** — strictly idempotent; writes anchor + hub config via `persist_paths`
+- **`memory-doctor --fix`** — align anchor + hub; migration note for legacy hooks/symlinks
+- **Docs** — README, ONBOARDING, MIGRATION, ARCHITECTURE — plugin + anchor model
+
+### Deprecated
+
+- `link-cursor-skills.sh`, `install-memory-hooks.sh` — plugin bundle replaces symlinks / global hooks merge
+
 ## [0.11.0] - 2026-06-08
 
 ### Added

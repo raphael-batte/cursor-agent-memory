@@ -1,34 +1,37 @@
-# Onboarding — fresh clone
+# Onboarding — Cursor plugin
 
 One skill, one sync command. Framework repo is **English-only**; your `$MEMORY_HOME` hub can be any language.
 
 ## Prerequisites
 
-- Cursor with **Skills** enabled
+- Cursor with **Skills** and **Plugins** (local plugins)
 - Python 3.10+
-- Git
 
-## Quick start (single clone)
+## Quick start
 
 ```bash
 git clone https://github.com/raphael-batte/cursor-agent-memory.git
 cd cursor-agent-memory
-export FRAMEWORK_ROOT="$(pwd)"
-bash scripts/link-cursor-skills.sh --force
-bash scripts/init-memory.sh
+bash scripts/install-local.sh
 ```
 
 | Step | What it does |
 |------|----------------|
-| `link-cursor-skills.sh` | Symlinks `@agent-memory` skill into `~/.cursor/skills/` |
-| `init-memory.sh` | Creates `<clone>/memory/` (context, feedback, chats — **gitignored**) |
+| `install-local.sh` | Symlinks bundle → `~/.cursor/plugins/local/agent-memory` (delivery only) |
+| Reload Cursor | Plugin discovers skills + hooks from bundle |
+| `init-memory.sh` | Creates hub + anchor (idempotent; never overwrites user data) |
+
+Default hub: `~/.cursor/agent-memory/` (override via anchor — Phase B will ask on first run).
+
+```bash
+bash scripts/init-memory.sh
+```
 
 ### Sync in Cursor
 
 1. Open any project in Cursor.
 2. Add **`@agent-memory`** in chat.
 3. Say: **`sync with agent memory`** — agent scans transcripts (~180 days by default), asks period/limit, runs sync.
-4. **Reload Window** — hooks install during sync.
 
 ### What sync + hooks do automatically
 
@@ -36,11 +39,11 @@ bash scripts/init-memory.sh
 |--------|-----|
 | `chats/manifest.json` | Tracks processed Cursor chats |
 | `chats/merge-staging/` | Raw candidates per chat (for agent review) |
-| `chats/projects/<slug>.md` | **Recent**, **`## Next step`** (pointer or explicit `_No forward pointer._` + chat drill link), optional **`[bootstrap]` Decisions** on first sync |
+| `chats/projects/<slug>.md` | **Recent**, **`## Next step`** (pointer or explicit placeholder + chat drill link), optional **`[bootstrap]` Decisions** on first sync |
 | `context/GLOBAL_CONTEXT.md` → **Projects** | Rows from distilled workspaces |
 | Boundary hooks | `sessionStart` / `sessionEnd` / `preCompact` re-distill stale chats and refresh **Next step** |
 
-**Forward pointer** replaces per-repo `AGENT_HANDOFF.md` — one file per project slug under `chats/projects/`.
+**Forward pointer** — one file per project slug under `chats/projects/` (`## Next step`).
 
 ### After sync — agent should offer (optional)
 
@@ -58,45 +61,47 @@ python3 scripts/verify-memory.py --memory-home "$MEMORY_HOME"
 
 ---
 
-## Second machine (same hub, new Mac)
+## Existing hub (migrate path)
 
-1. `git clone` / `git pull` your framework clone (any path)
-2. `bash scripts/link-cursor-skills.sh --force`
-3. `bash scripts/install-memory-hooks.sh` — writes `~/.cursor/hooks/agent-memory.env`
-4. `python3 scripts/memory-doctor.py --fix` — repairs `memory/config.json` paths
-
-Sync the hub separately: private git / Syncthing / iCloud on `memory/` only.
-
-Do **not** use the legacy XDG config directory — read-only fallback (deprecated; see hook env).
-
-### Optional: session-start rule (per workspace)
-
-After first sync, install a thin always-on rule with resolved paths:
+If you already have data (e.g. `<clone>/memory/`):
 
 ```bash
-bash scripts/init-project-rules.sh --project /path/to/your/workspace
-# if slug differs from repo folder name:
-bash scripts/init-project-rules.sh --project /path/to/workspace --slug <name-from-chats/projects>
+bash scripts/migrate-memory.sh --from /path/to/old-hub --to "$HOME/.cursor/agent-memory"
+# or keep old path — init-memory + doctor --fix writes anchor
+python3 scripts/memory-doctor.py --fix
 ```
-
-Check distills: `ls memory/chats/projects/`
 
 ---
 
-## Contributors
+## Legacy install cleanup
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) — branch → PR → CI → merge to `main`.
+After switching to the plugin, **remove** to avoid double hooks/distill:
+
+- `~/.cursor/skills/agent-memory` symlink (if present)
+- `agent-memory-*` entries in `~/.cursor/hooks.json` (if you used `install-memory-hooks.sh`)
+- Optional: `~/.cursor/hooks/agent-memory.env` (deprecated; anchor replaces it)
+
+---
+
+## Contributors / dev loop
+
+```bash
+bash scripts/install-local.sh   # symlink this clone as the plugin bundle
+bash tests/run-tests.sh
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
 ## Verify setup
 
 ```bash
-bash scripts/skills-status.sh
+python3 scripts/memory-doctor.py
 python3 scripts/memory-status.py --brief
 ```
 
-Hooks env: `~/.cursor/hooks/agent-memory.env`  
+Anchor: `~/.cursor/agent-memory/config.json`  
 Transcripts (read-only): `~/.cursor/projects/*/agent-transcripts/`
 
 ## Troubleshooting
@@ -105,9 +110,9 @@ Transcripts (read-only): `~/.cursor/projects/*/agent-transcripts/`
 |---------|-----|
 | Sync finds 0 chats | Transcripts under `~/.cursor/projects/` |
 | verify failed | `memory-doctor.py --memory-home "$MEMORY_HOME"` |
-| Hooks silent | Reload Cursor; check `~/.cursor/hooks/agent-memory.env` |
+| Hooks silent | Reload Cursor; check plugin at `~/.cursor/plugins/local/agent-memory` |
 | Stale Next step | Close chat (sessionEnd distill) or `list-chats.py --pending` |
-| Wrong paths after hub sync | `memory-doctor.py --fix`; check `~/.cursor/hooks/agent-memory.env` |
+| Wrong paths after move | `memory-doctor.py --fix`; check anchor `memory_home` |
 | Rule reads wrong distill | `init-project-rules.sh --slug <name-from-chats/projects>` |
 
 Details: [MIGRATION.md](MIGRATION.md) · [INSTRUCTIONS.md](INSTRUCTIONS.md)

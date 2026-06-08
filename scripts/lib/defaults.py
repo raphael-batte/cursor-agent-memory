@@ -17,7 +17,6 @@ BOUNDARY_DEBOUNCE_SECONDS = 30
 POINTER_LOW_CONFIDENCE = 0.6
 
 # Layer rotation / verify
-MAX_HANDOFF_LINES = 80
 MAX_LAYER_FILE_LINES = 100
 ROTATION_WARN_LINES = 80
 
@@ -80,7 +79,6 @@ def load_thresholds(hub_config: dict[str, Any] | None = None) -> dict[str, int]:
     out = {
         "max_distill_messages": MAX_DISTILL_MESSAGES,
         "auto_spread_threshold": AUTO_SPREAD_THRESHOLD,
-        "max_handoff_lines": MAX_HANDOFF_LINES,
         "max_layer_file_lines": MAX_LAYER_FILE_LINES,
         "rotation_warn_lines": ROTATION_WARN_LINES,
     }

@@ -59,7 +59,7 @@ class TestSkipDistill(unittest.TestCase):
 
 
 class TestSessionStart(unittest.TestCase):
-    def test_session_start_no_handoff_context(self) -> None:
+    def test_session_start_no_repo_context_inject(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             hub = Path(tmp)
             (hub / "chats").mkdir()
@@ -68,7 +68,6 @@ class TestSessionStart(unittest.TestCase):
             )
             root = Path(tmp) / "proj"
             root.mkdir()
-            (root / "AGENT_HANDOFF.md").write_text("## Next Step\n\nX\n", encoding="utf-8")
             with mock.patch.object(bh, "run_session_start_catchup") as m:
                 m.return_value = {"status": "catchup", "distilled": 0}
                 result = bh.handle_session_start(

@@ -1,25 +1,26 @@
 # Migration & AI workflow
 
-Move an existing memory hub to this framework, wire Cursor skills, and distill chats.
+Move an existing memory hub to this framework, install the Cursor plugin, and distill chats.
 
-**Framework (git):** `$FRAMEWORK_ROOT` — this clone (skills, scripts, hooks).  
-**Data hub (never git):** `$MEMORY_HOME` — default `<clone>/memory/` (gitignored).
+**Bundle (git / plugin):** skills, scripts, hooks — replaceable.  
+**Anchor:** `~/.cursor/agent-memory/config.json` — `memory_home` pointer (survives updates).  
+**Hub (never git):** `$MEMORY_HOME` — context, feedback, chats.
 
 Setup: [ONBOARDING.md](ONBOARDING.md)
 
 ---
 
-## 1. Fresh machine
+## 1. Fresh install
 
 ```bash
 git clone https://github.com/raphael-batte/cursor-agent-memory.git
 cd cursor-agent-memory
-export FRAMEWORK_ROOT="$(pwd)"
-bash scripts/link-cursor-skills.sh --force
+bash scripts/install-local.sh
+# Reload Cursor
 bash scripts/init-memory.sh
 ```
 
-In Cursor with `@agent-memory`: **sync with agent memory**. Reload window after sync.
+In Cursor with `@agent-memory`: **sync with agent memory**.
 
 Manual:
 
@@ -27,14 +28,21 @@ Manual:
 python3 scripts/sync-memory.py --days 180
 ```
 
-Paths are written to `$MEMORY_HOME/config.json` on init/link/sync — no `~/.config` files created.
+Paths: anchor + `$MEMORY_HOME/config.json` (written by `init-memory` / `memory-doctor --fix`).
 
-Example `$MEMORY_HOME/config.json`:
+Example anchor:
+
+```json
+{ "memory_home": "/Users/you/.cursor/agent-memory" }
+```
+
+Example hub `config.json`:
 
 ```json
 {
-  "framework_root": "/path/to/cursor-agent-memory",
-  "memory_home": "/path/to/cursor-agent-memory/memory"
+  "plugin_root": "/Users/you/.cursor/plugins/local/agent-memory",
+  "framework_root": "/Users/you/.cursor/plugins/local/agent-memory",
+  "memory_home": "/Users/you/.cursor/agent-memory"
 }
 ```
 
@@ -45,89 +53,78 @@ Example `$MEMORY_HOME/config.json`:
 Copies **missing** files only (`rsync --ignore-existing`).
 
 ```bash
-bash "$FRAMEWORK_ROOT/scripts/migrate-memory.sh" \
+bash scripts/migrate-memory.sh \
   --from /path/to/old-hub \
-  --to "$MEMORY_HOME"
+  --to "$HOME/.cursor/agent-memory"
 ```
 
 Then:
 
 ```bash
-bash "$FRAMEWORK_ROOT/scripts/link-cursor-skills.sh" --force
-python3 "$FRAMEWORK_ROOT/scripts/memory-doctor.py" --fix
+python3 scripts/memory-doctor.py --fix
 ```
+
+To keep a custom hub path, set `--to` accordingly; `doctor --fix` updates the anchor.
 
 ---
 
-## 3. Secrets (hard requirement)
+## 3. Legacy → plugin
+
+If you previously used symlink skills or global hooks:
+
+| Remove | Why |
+|--------|-----|
+| `~/.cursor/skills/agent-memory` symlink | Plugin provides skill from bundle |
+| `agent-memory-*` in `~/.cursor/hooks.json` | Plugin provides `hooks/hooks.json` |
+| `~/.cursor/hooks/agent-memory.env` (optional) | Anchor + plugin hooks replace env file |
+
+Then `install-local.sh` + Reload + `init-memory.sh` (idempotent).
+
+**Deprecated scripts** (still run with warnings): `link-cursor-skills.sh`, `install-memory-hooks.sh`.
+
+---
+
+## 4. Secrets (hard requirement)
 
 **Never** put passwords, tokens, API keys, JWT, private keys, or `.env` values into `$MEMORY_HOME`.
 
 ```bash
-python3 "$FRAMEWORK_ROOT/scripts/verify-memory.py" --memory-home "$MEMORY_HOME"
+python3 scripts/verify-memory.py --memory-home "$MEMORY_HOME"
 ```
 
 ---
 
-## 4. Chat distill workflow
+## 5. Chat distill workflow
 
 **Do not** paste raw `.jsonl` into chat.
 
 ```bash
-python3 "$FRAMEWORK_ROOT/scripts/list-chats.py" --memory-home "$MEMORY_HOME" --pending
-python3 "$FRAMEWORK_ROOT/scripts/distill-merge.py" "$UUID" --strategy auto --memory-home "$MEMORY_HOME"
-python3 "$FRAMEWORK_ROOT/scripts/distill-merge.py" "$UUID" --apply --memory-home "$MEMORY_HOME"
-python3 "$FRAMEWORK_ROOT/scripts/verify-memory.py" --memory-home "$MEMORY_HOME" --strict-secrets
-```
-
-Transcripts (read-only): `~/.cursor/projects/*/agent-transcripts/`
-
-### Sync hub across machines
-
-Use a **private git repo** for `$MEMORY_HOME` only, or Syncthing/iCloud on the hub directory.  
-Framework: `git pull` in `$FRAMEWORK_ROOT` separately. Never push secrets — run `verify-memory.py` first.
-
----
-
-## 5. Forward pointer (replaces handoff)
-
-`chats/projects/<slug>.md` **## Next step** is updated automatically on boundary distills (`lib/forward_pointer.py`). Legacy `AGENT_HANDOFF.md` in repos is ignored by the framework — migrate next-step text into distill or delete handoff files.
-
----
-
-## 6. Agent prompts
-
-**First-time:** `sync with agent memory`
-
-**After session:** distill via `distill-merge.py` — no raw jsonl, verify must pass.
-
-**Weekly:**
-
-```bash
-bash "$FRAMEWORK_ROOT/scripts/weekly-verify.sh"
-```
-
-**Repair:**
-
-```bash
-python3 "$FRAMEWORK_ROOT/scripts/memory-doctor.py" --memory-home "$MEMORY_HOME" --fix
+python3 scripts/list-chats.py --memory-home "$MEMORY_HOME" --pending
+python3 scripts/distill-merge.py "$UUID" --strategy auto --memory-home "$MEMORY_HOME"
+python3 scripts/distill-merge.py "$UUID" --apply --memory-home "$MEMORY_HOME"
+python3 scripts/verify-memory.py --memory-home "$MEMORY_HOME" --strict-secrets
 ```
 
 ---
 
-## 7. Troubleshooting
+## 6. Forward pointer
 
-| Problem | Fix |
-|---------|-----|
-| Scripts can't find hub | `bash scripts/init-memory.sh`, or `--memory-home`, or `memory-doctor --fix` |
-| Second Mac / synced hub | [ONBOARDING → Second machine](ONBOARDING.md#second-machine-same-hub-new-mac) |
-| Legacy XDG config | Read-only — migrate to hook env + `memory/config.json` |
-| Skills point to old path | `link-cursor-skills.sh --force` from framework clone |
-| `list-chats` STALE | Re-distill when transcript mtime > `distilled_at` |
-| verify fails | Remove secrets; fix manifest/GLOBAL_CONTEXT |
+`chats/projects/<slug>.md` **## Next step** is updated automatically on boundary distills (`lib/forward_pointer.py`). Migrate any per-repo “what’s next” notes into the distill or delete obsolete files.
+
+---
+
+## Quick reference
+
+| Situation | Doc |
+|-----------|-----|
+| First-time setup | [ONBOARDING.md](ONBOARDING.md) |
+| Old hub path | §2 migrate + `memory-doctor.py --fix` |
+| Double distill / duplicate hooks | §3 legacy cleanup |
+| Multi-device (future) | Obsidian export/import — not in v1 |
+
+Repair paths:
 
 ```bash
-cd "$FRAMEWORK_ROOT" && git pull
-bash scripts/link-cursor-skills.sh --force
-bash tests/run-tests.sh
+python3 scripts/memory-doctor.py --fix
+bash scripts/install-local.sh && # Reload Cursor
 ```

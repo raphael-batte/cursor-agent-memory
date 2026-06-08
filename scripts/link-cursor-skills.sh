@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# Symlink framework and optional personal skills into ~/.cursor/skills/
+# LEGACY: symlink skills into ~/.cursor/skills/ — use plugin install (install-local.sh).
 set -euo pipefail
+
+echo "[agent-memory] deprecated: use plugin install (bash scripts/install-local.sh)" >&2
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"

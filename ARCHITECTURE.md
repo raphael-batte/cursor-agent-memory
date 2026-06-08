@@ -13,16 +13,19 @@ Cursor agents start each session with no durable memory. Project rules help for 
 
 This framework is a **routed memory system**: small INDEX-first files, explicit layer choice per task, rotation at size limits, and tooling so agents never load megabyte jsonl transcripts.
 
-## One clone on disk
+## Plugin bundle + external hub
 
-| Location | Role | Git |
-|----------|------|-----|
-| **`$FRAMEWORK_ROOT`** (this repo) | Skills, scripts, templates, INSTRUCTIONS | **yes** |
-| **`$MEMORY_HOME`** (`<clone>/memory/`) | Context, feedback, chats, manifest | **never** (gitignored) |
+| Entity | Location | On plugin update |
+|--------|----------|------------------|
+| **Bundle** (code) | Cursor plugin dir (`~/.cursor/plugins/local/agent-memory/`) | replaced |
+| **Anchor** | `~/.cursor/agent-memory/config.json` | survives |
+| **Hub** (data) | path from anchor (default `~/.cursor/agent-memory/`) | survives |
 
-Path resolution: CLI `--memory-home` / `--framework-root` → env → `~/.cursor/hooks/agent-memory.env` → `<clone>/memory/config.json` → script location.
+Path resolution: `MEMORY_HOME` — CLI → env → anchor → default. `PLUGIN_ROOT` — script path → `.cursor-plugin/plugin.json`.
 
-Contributions: PR → `main` with CI ([CONTRIBUTING.md](CONTRIBUTING.md)).
+Install: `bash scripts/install-local.sh` → Reload Cursor → `init-memory.sh` (idempotent).
+
+Contributions: PR → `main` ([CONTRIBUTING.md](CONTRIBUTING.md)).
 
 ## Layer model
 

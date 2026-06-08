@@ -10,7 +10,7 @@ Thanks for helping improve **cursor-agent-memory**. All changes land via **pull 
    ```bash
    bash scripts/install-git-hooks.sh
    ```
-4. **Develop** — single clone: framework in git, private hub at `<clone>/memory/` (gitignored).
+4. **Develop** — clone repo, then `bash scripts/install-local.sh` (symlink as local plugin). Hub lives outside bundle (`~/.cursor/agent-memory/` by default).
 5. **Test locally:**
    ```bash
    bash tests/run-tests.sh

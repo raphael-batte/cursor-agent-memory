@@ -300,9 +300,9 @@ python3 $FRAMEWORK_ROOT/scripts/verify-memory.py --memory-home "$MEMORY_HOME" --
 
 ## Skills
 
-**One Cursor skill:** `@agent-memory` — install: `bash scripts/link-cursor-skills.sh --force`
+**One Cursor skill:** `@agent-memory` — install: `bash scripts/install-local.sh` → Reload Cursor
 
-Deep dives (read on demand, not symlinked by default): `skills/chat-memory/`, `skills/semantic-merge/`, etc.
+Deep dives (read on demand): `skills/chat-memory/`, `skills/semantic-merge/`, etc.
 
 ---
 
@@ -310,16 +310,15 @@ Deep dives (read on demand, not symlinked by default): `skills/chat-memory/`, `s
 
 **Start here:** [ONBOARDING.md](ONBOARDING.md) · [MIGRATION.md](MIGRATION.md)
 
-1. `git clone` → any folder; `export FRAMEWORK_ROOT="$(pwd)"`
-2. `link-cursor-skills.sh --force` → one skill
+1. `git clone` → `bash scripts/install-local.sh` → Reload Cursor
+2. `bash scripts/init-memory.sh` (hub + anchor, idempotent)
 3. In chat: **sync with agent memory** (or `sync-memory.py`)
-4. Reload Cursor
-5. Optional: domain skills via `link-cursor-skills.sh --personal <name>`
+
 ### Path resolution (all scripts)
 
-Priority: `--memory-home` CLI → `$MEMORY_HOME` env → `<clone>/memory/`.  
-`framework_root` from hook env, `memory/config.json`, or script location.  
-Framework scripts write **only** to `$MEMORY_HOME` and `~/.cursor/` (hooks/skills).
+`MEMORY_HOME`: CLI `--memory-home` → `$MEMORY_HOME` env → anchor `~/.cursor/agent-memory/config.json` → default `~/.cursor/agent-memory/`.  
+`PLUGIN_ROOT`: detect from script path → `.cursor-plugin/plugin.json`.  
+Scripts write user data **only** to `$MEMORY_HOME`; anchor at fixed path outside bundle.
 
 ---
 

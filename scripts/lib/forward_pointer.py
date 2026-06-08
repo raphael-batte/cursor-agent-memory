@@ -1,4 +1,4 @@
-"""Extract forward pointer (next step) from transcript tail — replaces repo handoff."""
+"""Extract forward pointer (## Next step) from transcript tail."""
 
 from __future__ import annotations
 

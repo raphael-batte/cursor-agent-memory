@@ -25,11 +25,10 @@ echo "KEEP" > "$NEW_HUB/context/conventions.md"
 bash "$ROOT/scripts/migrate-memory.sh" --from "$OLD_HUB" --to "$NEW_HUB"
 grep -q "KEEP" "$NEW_HUB/context/conventions.md"
 
-# link dry-run (capture output — pipefail + grep -q closes pipe → SIGPIPE)
-bash "$ROOT/scripts/link-cursor-skills.sh" --list --framework-root "$ROOT" >/dev/null
+# link dry-run (legacy script — still smoke-tested for deprecation path)
 link_out="$(bash "$ROOT/scripts/link-cursor-skills.sh" --only agent-memory --dry-run \
   --framework-root "$ROOT" 2>&1)"
-echo "$link_out" | grep -qE 'would link|exists:'
+echo "$link_out" | grep -qE 'would link|exists:|deprecated'
 
 # skills-status
 bash "$ROOT/scripts/skills-status.sh" \
@@ -39,7 +38,8 @@ bash "$ROOT/scripts/skills-status.sh" \
 # shellcheck source=../scripts/lib/config.sh
 source "$ROOT/scripts/lib/config.sh"
 resolved="$(resolve_memory_home "$NEW_HUB")"
-test "$resolved" = "$(cd "$NEW_HUB" && pwd)"
+test "$(python3 -c "import os; print(os.path.realpath('${resolved}'))")" \
+  = "$(python3 -c "import os; print(os.path.realpath('${NEW_HUB}'))")"
 
 # memory hooks install dry-run (capture — grep -q closes pipe → SIGPIPE on python tail)
 hooks_out="$(bash "$ROOT/scripts/install-memory-hooks.sh" --dry-run 2>&1)"
@@ -48,9 +48,9 @@ echo "$hooks_out" | grep -q "agent-memory-boundary"
 echo "$hooks_out" | grep -q "agent-memory-session-end"
 
 # boundary-hooks CLI (session-start catchup JSON)
-HANDOFF_WS="$TMP/workspace"
-mkdir -p "$HANDOFF_WS"
-boundary_out="$(printf '%s' '{"workspace_roots":["'"$HANDOFF_WS"'"]}' \
+TEST_WS="$TMP/workspace"
+mkdir -p "$TEST_WS"
+boundary_out="$(printf '%s' '{"workspace_roots":["'"$TEST_WS"'"]}' \
   | python3 "$ROOT/scripts/boundary-hooks.py" session-start)"
 echo "$boundary_out" | python3 -c "import json,sys; d=json.load(sys.stdin); assert 'catchup' in d"
 

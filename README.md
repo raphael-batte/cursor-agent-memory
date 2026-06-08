@@ -1,6 +1,6 @@
 # Cursor Agent Memory
 
-**Version:** 0.11.0 — see [VERSIONING.md](VERSIONING.md)
+**Version:** 0.12.0 — see [VERSIONING.md](VERSIONING.md)
 Created by [raphaelbatte](https://github.com/raphael-batte) · [raphbatte.com](https://raphbatte.com)
 
 ## What this is
@@ -13,9 +13,9 @@ Created by [raphaelbatte](https://github.com/raphael-batte) · [raphbatte.com](h
 
 Agents load **one layer per task** (INDEX-first), not everything every time. Weak pointer → drill transcript tail via `[title](uuid)` in distill (never bulk jsonl). Scripts verify hub integrity; hooks refresh on session boundaries.
 
-**One clone** — framework in git; private hub at `<clone>/memory/` (gitignored). MIT license.
+**Cursor plugin** — code in the bundle; your hub and anchor live **outside** it (survives updates). MIT license.
 
-→ **Setup:** [ONBOARDING.md](ONBOARDING.md) (incl. [Second machine](ONBOARDING.md#second-machine-same-hub-new-mac))
+→ **Setup:** [ONBOARDING.md](ONBOARDING.md)
 
 → **System design:** [ARCHITECTURE.md](ARCHITECTURE.md) · **Agent protocol:** [INSTRUCTIONS.md](INSTRUCTIONS.md) · **Human setup:** [MIGRATION.md](MIGRATION.md)
 
@@ -74,35 +74,40 @@ Distill flow: `distill-merge.py <uuid>` → review `merge-staging/` → **semant
 
 ```bash
 git clone https://github.com/raphael-batte/cursor-agent-memory.git
-cd cursor-agent-memory   # any clone path works
-bash scripts/link-cursor-skills.sh --force   # one skill: agent-memory
+cd cursor-agent-memory
+bash scripts/install-local.sh    # symlink → ~/.cursor/plugins/local/agent-memory
 ```
 
-`link-cursor-skills.sh` / `init-memory.sh` / `sync-memory.py` record the clone path in `memory/config.json` — folder name is arbitrary.
+**Reload Cursor**, then:
 
-In Cursor: add `@agent-memory`, then say **sync with agent memory**. Reload window after hooks install.
+```bash
+bash scripts/init-memory.sh      # hub + anchor (idempotent)
+```
+
+In Cursor: add `@agent-memory`, then say **sync with agent memory**.
 
 Manual sync:
 
 ```bash
-bash scripts/init-memory.sh
 python3 scripts/sync-memory.py --days 180
 ```
 
-### Config (`config.json`)
+### Three locations
+
+| Entity | Path | On plugin update |
+|--------|------|------------------|
+| **Bundle** (code) | `~/.cursor/plugins/local/agent-memory/` | replaced |
+| **Anchor** | `~/.cursor/agent-memory/config.json` | survives |
+| **Hub** (data) | from anchor (default `~/.cursor/agent-memory/`) | survives |
+
+`MEMORY_HOME` resolution: CLI `--memory-home` → env → anchor → default.
+
+### Config
 
 | File | Purpose |
 |------|---------|
-| `$MEMORY_HOME/config.json` | `framework_root`, `memory_home`, optional `linked_skills` |
-
-Scripts resolve paths: CLI flag → env → config → default. No `export` every session.
-
-## Two locations
-
-| Path | What | Git |
-|------|------|-----|
-| `$FRAMEWORK_ROOT/` (this clone) | Skills, scripts, templates, INSTRUCTIONS | **yes** (this repo) |
-| `$MEMORY_HOME` | GLOBAL_CONTEXT, feedback, chats, manifest | **never** |
+| `~/.cursor/agent-memory/config.json` | anchor — `memory_home` only |
+| `$MEMORY_HOME/config.json` | `plugin_root`, `memory_home` (hub-local) |
 
 **Never** store secrets in `$MEMORY_HOME`. Distill redacts known patterns; `verify-memory.py` scans the hub.
 
@@ -112,10 +117,11 @@ Sync bootstraps Projects in GLOBAL_CONTEXT from distills. Hooks keep **## Next s
 
 ```bash
 bash scripts/migrate-memory.sh --from /path/to/old-hub --to "$MEMORY_HOME"
-bash scripts/skills-status.sh
-bash scripts/link-cursor-skills.sh --force
+python3 scripts/memory-doctor.py --fix
 python3 scripts/memory-status.py --brief
 ```
+
+**Legacy:** if you used `link-cursor-skills.sh` or global `~/.cursor/hooks.json` entries, remove them after plugin install to avoid double distill — see [MIGRATION.md](MIGRATION.md).
 
 ## Docs map
 

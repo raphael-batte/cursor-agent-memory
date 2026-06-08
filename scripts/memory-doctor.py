@@ -13,10 +13,11 @@ sys.path.insert(0, str(SCRIPT_DIR))
 
 from lib.doctor_fix import run_fix  # noqa: E402
 from lib.memory_config import (  # noqa: E402
+    ANCHOR_FILE,
     framework_version,
-    load_global_config,
+    load_anchor_config,
     load_hub_config,
-    resolve_framework_root,
+    resolve_plugin_root,
     resolve_memory_home,
 )
 
@@ -44,7 +45,7 @@ def run_doctor(
     vm = load_script("verify_memory", "verify-memory.py")
     ms = load_script("memory_status", "memory-status.py")
 
-    global_cfg = load_global_config()
+    anchor_cfg = load_anchor_config()
     hub_cfg = load_hub_config(memory_home)
     processed, pending, total = lc.chat_counts(memory_home)
     results, warnings = vm.run_checks_for_hub(
@@ -58,8 +59,10 @@ def run_doctor(
     return {
         "memory_home": str(memory_home),
         "memory_home_exists": memory_home.is_dir(),
-        "global_config": global_cfg,
+        "anchor_file": str(ANCHOR_FILE),
+        "anchor_config": anchor_cfg,
         "hub_config": hub_cfg,
+        "plugin_root": str(framework_root) if framework_root else None,
         "framework_root": str(framework_root) if framework_root else None,
         "framework_version": framework_version(framework_root),
         "chats": {"processed": processed, "pending": pending, "total": total},
@@ -74,8 +77,8 @@ def run_doctor(
             "unlinked": skills["unlinked"],
         },
         "path_resolution": (
-            "CLI --memory-home > $MEMORY_HOME env > <clone>/memory; "
-            "framework_root from hub parent or memory/config.json"
+            "CLI --memory-home > env > anchor ~/.cursor/agent-memory/config.json "
+            "> default ~/.cursor/agent-memory/; plugin_root from bundle path"
         ),
     }
 
@@ -96,7 +99,7 @@ def main() -> int:
     args = parser.parse_args()
 
     memory_home = resolve_memory_home(args.memory_home, script_file=__file__)
-    framework_root = resolve_framework_root(
+    framework_root = resolve_plugin_root(
         args.framework_root,
         script_file=__file__,
         memory_home=memory_home,
