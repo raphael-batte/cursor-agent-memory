@@ -2,7 +2,7 @@
   "name": "agent-memory",
   "displayName": "Agent Memory",
   "version": "0.13.0",
-  "description": "Keeps durable agent context in a private hub outside the plugin bundle — global context, feedback, and distilled chat history with a Next step forward pointer. Hooks update memory on session boundaries; secrets are redacted on distill.",
+  "description": "Remembers what matters between Cursor sessions: preferences, project context, and where you left off, in private files that survive plugin updates. Memory updates automatically; secrets are never stored.",
   "author": {
     "name": "raphaelbatte"
   },
