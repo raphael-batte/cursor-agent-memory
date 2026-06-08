@@ -30,11 +30,11 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-MEMORY_HOME="$(resolve_memory_home "$MEMORY_HOME_OVERRIDE")"
-FRAMEWORK_ROOT="$(resolve_framework_root "$MEMORY_HOME" "$FRAMEWORK_OVERRIDE")"
+FRAMEWORK_ROOT="$(resolve_framework_root "$FRAMEWORK_OVERRIDE" "$REPO_ROOT")"
 if [[ -z "$FRAMEWORK_ROOT" ]]; then
   FRAMEWORK_ROOT="$REPO_ROOT"
 fi
+MEMORY_HOME="$(resolve_memory_home "$MEMORY_HOME_OVERRIDE" "$FRAMEWORK_ROOT")"
 
 FRAMEWORK_NAMES=(agent-memory global-context chat-memory feedback-memory)
 

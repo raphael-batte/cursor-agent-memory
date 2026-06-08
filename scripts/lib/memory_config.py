@@ -8,7 +8,6 @@ import warnings
 from pathlib import Path
 
 HUB_DIRNAME = "memory"
-DEV_CONFIG_NAME = "dev.config.json"
 # Legacy read-only fallback (never created by framework scripts)
 LEGACY_GLOBAL_CONFIG = Path.home() / ".config" / "cursor-agent-memory" / "config.json"
 CURSOR_HOOK_ENV = Path.home() / ".cursor" / "hooks" / "agent-memory.env"
@@ -50,38 +49,20 @@ def detect_framework_root_from_script(script_file: str | Path) -> Path | None:
     return None
 
 
-def is_dev_project(dev_root: Path | None) -> bool:
-    """Dev clone has gitignored dev.config.json pointing at install — no local memory/."""
-    if dev_root is None:
-        return False
-    return (dev_root / DEV_CONFIG_NAME).is_file()
-
-
-def dev_config_install_root(dev_root: Path | None) -> Path | None:
-    if dev_root is None:
-        return None
-    cfg = _read_json(dev_root / DEV_CONFIG_NAME)
-    raw = str(cfg.get("install_root", "")).strip()
-    return _valid_install_dir(raw)
-
-
-def resolve_install_root(
+def resolve_framework_root(
     override: str | None = None,
     *,
-    dev_root: Path | None = None,
+    script_file: str | Path | None = None,
+    memory_home: Path | None = None,
 ) -> Path | None:
     """
-    Cursor-connected install clone (install_root in dev.config.json or env).
-    Dev project is separate — see dev.config.json.
+    Framework clone — directory containing INSTRUCTIONS.md.
+    CLI/env/hook override > hub config > script location.
     """
-    found = _valid_framework_dir(override or "") or _valid_install_dir(override or "")
+    found = _valid_framework_dir(override or "")
     if found:
         return found
-    if dev_root is not None and (dev_root / DEV_CONFIG_NAME).is_file():
-        from_dev = dev_config_install_root(dev_root)
-        if from_dev is not None:
-            return from_dev
-    for key in ("AGENT_MEMORY_INSTALL", "AGENT_MEMORY_FRAMEWORK", "FRAMEWORK_ROOT"):
+    for key in ("AGENT_MEMORY_FRAMEWORK", "FRAMEWORK_ROOT", "AGENT_MEMORY_INSTALL"):
         found = _valid_framework_dir(os.environ.get(key, "").strip())
         if found:
             return found
@@ -89,31 +70,34 @@ def resolve_install_root(
     found = _valid_framework_dir(hook.get("AGENT_MEMORY_FRAMEWORK", ""))
     if found:
         return found
+    if memory_home is not None:
+        from_parent = framework_root_from_memory_home(memory_home)
+        if from_parent is not None:
+            return from_parent
+        hub_cfg = load_hub_config(memory_home)
+        found = _valid_framework_dir(str(hub_cfg.get("framework_root", "")).strip())
+        if found:
+            return found
+    if script_file is not None:
+        detected = detect_framework_root_from_script(script_file)
+        if detected is not None:
+            return detected
     return None
 
 
 def default_memory_home(
     script_file: str | Path | None = None,
     *,
-    install_root: Path | None = None,
+    framework_root: Path | None = None,
 ) -> Path | None:
-    """
-    Hub at <install>/memory/.
-    Dev clone (dev.config.json) never uses <dev>/memory/.
-    Single-clone install may use <clone>/memory/ when no separate install exists.
-    """
-    if install_root is not None:
-        return (install_root / HUB_DIRNAME).resolve()
+    """Hub at <framework>/memory/."""
+    if framework_root is not None:
+        return (framework_root / HUB_DIRNAME).resolve()
     if script_file is None:
         return None
-    dev = detect_framework_root_from_script(script_file)
-    install = resolve_install_root(dev_root=dev)
-    if install is not None:
-        return (install / HUB_DIRNAME).resolve()
-    if dev is not None and is_dev_project(dev):
-        return None
-    if dev is not None:
-        return (dev / HUB_DIRNAME).resolve()
+    fw = detect_framework_root_from_script(script_file)
+    if fw is not None:
+        return (fw / HUB_DIRNAME).resolve()
     return None
 
 
@@ -122,7 +106,7 @@ def resolve_memory_home(
     script_file: str | Path | None = None,
 ) -> Path:
     """
-    CLI > MEMORY_HOME env > <install>/memory > dev clone memory/ > legacy read.
+    CLI > MEMORY_HOME env > hook env > <framework>/memory > legacy read.
     """
     if override:
         return Path(override).expanduser().resolve()
@@ -135,9 +119,8 @@ def resolve_memory_home(
         p = Path(hook_hub).expanduser()
         if p.is_dir():
             return p.resolve()
-    dev = detect_framework_root_from_script(script_file) if script_file else None
-    install = resolve_install_root(dev_root=dev)
-    hub = default_memory_home(script_file, install_root=install)
+    fw = resolve_framework_root(script_file=script_file) if script_file else None
+    hub = default_memory_home(script_file, framework_root=fw)
     if hub is not None:
         return hub
     legacy = _read_json(LEGACY_GLOBAL_CONFIG)
@@ -145,19 +128,14 @@ def resolve_memory_home(
     if legacy_hub:
         warnings.warn(
             "Reading memory_home from legacy XDG cursor-agent-memory config is "
-            "deprecated; use Cursor hook env or <install>/memory/config.json instead.",
+            "deprecated; use Cursor hook env or <clone>/memory/config.json instead.",
             DeprecationWarning,
             stacklevel=2,
         )
         return Path(legacy_hub).expanduser().resolve()
-    if dev is not None and is_dev_project(dev):
-        raise RuntimeError(
-            "dev clone must not use <dev>/memory/ — set install_root in dev.config.json "
-            "and run scripts/sync-to-install.sh"
-        )
     raise RuntimeError(
-        "memory_home unknown — pass --memory-home or set install_root in dev.config.json "
-        f"(expected <install>/{HUB_DIRNAME}/)"
+        "memory_home unknown — pass --memory-home, set MEMORY_HOME env, "
+        f"or run init-memory.sh (expected <clone>/{HUB_DIRNAME}/)"
     )
 
 
@@ -179,15 +157,6 @@ def _valid_framework_dir(path: str) -> Path | None:
     return None
 
 
-def _valid_install_dir(path: str) -> Path | None:
-    if not path or not isinstance(path, str):
-        return None
-    p = Path(path).expanduser()
-    if p.is_dir():
-        return p.resolve()
-    return None
-
-
 def framework_root_from_memory_home(memory_home: Path) -> Path | None:
     if memory_home.name == HUB_DIRNAME:
         parent = memory_home.parent
@@ -196,42 +165,11 @@ def framework_root_from_memory_home(memory_home: Path) -> Path | None:
     return None
 
 
-def resolve_framework_root(
-    memory_home: Path,
-    override: str | None = None,
-    script_file: str | None = None,
-) -> Path | None:
-    """Prefer Cursor install root over dev clone script location."""
-    found = _valid_framework_dir(override or "")
-    if found:
-        return found
-    dev = detect_framework_root_from_script(script_file) if script_file else None
-    install = resolve_install_root(dev_root=dev)
-    if install is not None:
-        return install
-    from_parent = framework_root_from_memory_home(memory_home)
-    if from_parent is not None:
-        return from_parent
-    agent_env = os.environ.get("AGENT_MEMORY_FRAMEWORK", "").strip()
-    found = _valid_framework_dir(agent_env)
-    if found:
-        return found
-    hub_cfg = load_hub_config(memory_home)
-    found = _valid_framework_dir(str(hub_cfg.get("framework_root", "")).strip())
-    if found:
-        return found
-    if script_file:
-        return detect_framework_root_from_script(script_file)
-    return None
-
-
 def persist_hub_config(
     framework_root: Path,
     memory_home: Path,
-    *,
-    dev_root: Path | None = None,
 ) -> None:
-    """Write memory/config.json at install hub."""
+    """Write memory/config.json at hub."""
     fw_str = str(framework_root.resolve())
     hub_cfg_path = memory_home / "config.json"
     hub_cfg = load_hub_config(memory_home)
@@ -241,15 +179,13 @@ def persist_hub_config(
     for key, val in (
         ("framework_root", fw_str),
         ("memory_home", str(memory_home.resolve())),
-        ("install_root", fw_str),
     ):
         if hub_cfg.get(key) != val:
             hub_cfg[key] = val
             changed = True
-    if dev_root is not None and str(dev_root.resolve()) != fw_str:
-        dev_str = str(dev_root.resolve())
-        if hub_cfg.get("dev_root") != dev_str:
-            hub_cfg["dev_root"] = dev_str
+    for legacy_key in ("install_root", "dev_root"):
+        if legacy_key in hub_cfg:
+            del hub_cfg[legacy_key]
             changed = True
     if changed:
         memory_home.mkdir(parents=True, exist_ok=True)
@@ -263,18 +199,13 @@ def persist_framework_root(
     framework_root: Path,
     *,
     memory_home: Path | None = None,
-    dev_root: Path | None = None,
     update_global: bool = False,
     update_hub: bool = True,
 ) -> None:
     if update_global:
         raise ValueError("update_global is disabled — use memory/config.json only")
     if update_hub and memory_home is not None:
-        persist_hub_config(
-            framework_root.resolve(),
-            memory_home.resolve(),
-            dev_root=dev_root,
-        )
+        persist_hub_config(framework_root.resolve(), memory_home.resolve())
 
 
 def framework_version(framework_root: Path | None) -> str | None:

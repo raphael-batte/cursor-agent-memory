@@ -23,6 +23,17 @@ jobs:
       - name: Run test suite
         run: bash tests/run-tests.sh
 
+  version-check:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Require VERSION or CHANGELOG on behaviour changes
+        run: python3 scripts/check-version-bump.py "origin/${{ github.base_ref }}"
+
   gitleaks:
     runs-on: ubuntu-latest
     steps:

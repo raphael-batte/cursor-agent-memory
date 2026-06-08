@@ -317,8 +317,8 @@ Deep dives (read on demand, not symlinked by default): `skills/chat-memory/`, `s
 5. Optional: domain skills via `link-cursor-skills.sh --personal <name>`
 ### Path resolution (all scripts)
 
-Priority: `--memory-home` CLI → `$MEMORY_HOME` env → `<install>/memory/`.  
-`framework_root` from `dev.config.json`, hook env, or `memory/config.json`.  
+Priority: `--memory-home` CLI → `$MEMORY_HOME` env → `<clone>/memory/`.  
+`framework_root` from hook env, `memory/config.json`, or script location.  
 Framework scripts write **only** to `$MEMORY_HOME` and `~/.cursor/` (hooks/skills).
 
 ---

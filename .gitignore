@@ -11,4 +11,3 @@ __pycache__/
 memory/
 .agent-memory/
 .memory/
-dev.config.json

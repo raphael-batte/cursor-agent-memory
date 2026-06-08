@@ -109,19 +109,11 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-INSTALL_ROOT="$(resolve_install_root "$FRAMEWORK_OVERRIDE" "$REPO_ROOT")"
-if [[ -z "$INSTALL_ROOT" ]]; then
-  INSTALL_ROOT="$REPO_ROOT"
-fi
-MEMORY_HOME="$(resolve_memory_home "$MEMORY_HOME_OVERRIDE" "$INSTALL_ROOT")"
-FRAMEWORK_ROOT="$(resolve_framework_root "$MEMORY_HOME" "$FRAMEWORK_OVERRIDE" "$INSTALL_ROOT")"
+FRAMEWORK_ROOT="$(resolve_framework_root "$FRAMEWORK_OVERRIDE" "$REPO_ROOT")"
 if [[ -z "$FRAMEWORK_ROOT" ]]; then
-  FRAMEWORK_ROOT="$INSTALL_ROOT"
+  FRAMEWORK_ROOT="$REPO_ROOT"
 fi
-DEV_ROOT=""
-if [[ "$(cd "$REPO_ROOT" && pwd)" != "$(cd "$FRAMEWORK_ROOT" && pwd)" ]]; then
-  DEV_ROOT="$REPO_ROOT"
-fi
+MEMORY_HOME="$(resolve_memory_home "$MEMORY_HOME_OVERRIDE" "$FRAMEWORK_ROOT")"
 
 if [[ "$DO_LIST" == true ]]; then
   list_available
@@ -148,7 +140,7 @@ for name in "${names[@]}"; do
   link_skill "$name" "$(framework_src "$name")" || true
 done
 
-write_hub_config_paths "$FRAMEWORK_ROOT" "$MEMORY_HOME" "$DEV_ROOT"
+write_hub_config_paths "$FRAMEWORK_ROOT" "$MEMORY_HOME"
 write_cursor_hook_env "$FRAMEWORK_ROOT" "$MEMORY_HOME"
 
 echo "Done."

@@ -74,7 +74,20 @@ class TestMemoryConfig(unittest.TestCase):
             with mock.patch.dict(os.environ, {}, clear=True):
                 os.environ.pop("FRAMEWORK_ROOT", None)
                 self.assertEqual(
-                    mc.resolve_framework_root(hub, None, None),
+                    mc.resolve_framework_root(memory_home=hub),
+                    fw.resolve(),
+                )
+
+    def test_resolve_framework_root_env_override(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            fw = Path(tmp) / "framework"
+            fw.mkdir()
+            (fw / "INSTRUCTIONS.md").write_text("# x", encoding="utf-8")
+            with mock.patch.dict(
+                os.environ, {"FRAMEWORK_ROOT": str(fw)}, clear=False
+            ):
+                self.assertEqual(
+                    mc.resolve_framework_root(),
                     fw.resolve(),
                 )
 
@@ -84,10 +97,17 @@ class TestMemoryConfig(unittest.TestCase):
             fw.mkdir()
             (fw / "INSTRUCTIONS.md").write_text("# x", encoding="utf-8")
             hub = fw / "memory"
+            hub.mkdir(parents=True)
+            (hub / "config.json").write_text(
+                json.dumps({"install_root": "/old", "dev_root": "/old-dev"}),
+                encoding="utf-8",
+            )
             mc.persist_hub_config(fw, hub)
             cfg = json.loads((hub / "config.json").read_text())
             self.assertEqual(cfg["framework_root"], str(fw.resolve()))
             self.assertEqual(cfg["memory_home"], str(hub.resolve()))
+            self.assertNotIn("install_root", cfg)
+            self.assertNotIn("dev_root", cfg)
 
     def test_framework_version(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -95,46 +115,6 @@ class TestMemoryConfig(unittest.TestCase):
             (fw / "VERSION").write_text("1.2.3\n", encoding="utf-8")
             self.assertEqual(mc.framework_version(fw), "1.2.3")
             self.assertIsNone(mc.framework_version(None))
-
-    def test_dev_clone_uses_install_hub(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            dev = Path(tmp) / "dev"
-            install = Path(tmp) / "install"
-            for root in (dev, install):
-                (root / "scripts").mkdir(parents=True)
-                (root / "INSTRUCTIONS.md").write_text("# x", encoding="utf-8")
-            script = dev / "scripts" / "sync-memory.py"
-            script.write_text("", encoding="utf-8")
-            (dev / mc.DEV_CONFIG_NAME).write_text(
-                json.dumps({"install_root": str(install)}),
-                encoding="utf-8",
-            )
-            with mock.patch.dict(os.environ, {}, clear=True):
-                os.environ.pop("MEMORY_HOME", None)
-                hub = mc.resolve_memory_home(None, script_file=str(script))
-                self.assertEqual(hub, (install / "memory").resolve())
-                self.assertFalse((dev / "memory").exists())
-
-    def test_dev_clone_rejects_local_memory_fallback(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            dev = Path(tmp) / "dev"
-            dev.mkdir()
-            (dev / "scripts").mkdir()
-            (dev / "INSTRUCTIONS.md").write_text("# x", encoding="utf-8")
-            script = dev / "scripts" / "sync-memory.py"
-            script.write_text("", encoding="utf-8")
-            (dev / mc.DEV_CONFIG_NAME).write_text(
-                json.dumps({"install_root": "/nonexistent/install"}),
-                encoding="utf-8",
-            )
-            with mock.patch.dict(os.environ, {}, clear=True):
-                os.environ.pop("MEMORY_HOME", None)
-                with mock.patch.object(mc, "_read_json", return_value={}), mock.patch.object(
-                    mc, "_load_cursor_hook_env", return_value={}
-                ):
-                    with self.assertRaises(RuntimeError) as ctx:
-                        mc.resolve_memory_home(None, script_file=str(script))
-                    self.assertIn("dev clone", str(ctx.exception).lower())
 
     def test_legacy_global_config_emits_deprecation_warning(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -150,7 +130,7 @@ class TestMemoryConfig(unittest.TestCase):
             with mock.patch.object(mc, "LEGACY_GLOBAL_CONFIG", legacy_cfg):
                 with mock.patch.object(mc, "default_memory_home", return_value=None):
                     with mock.patch.object(
-                        mc, "resolve_install_root", return_value=None
+                        mc, "resolve_framework_root", return_value=None
                     ):
                         with mock.patch.object(
                             mc, "_load_cursor_hook_env", return_value={}
@@ -169,60 +149,6 @@ class TestMemoryConfig(unittest.TestCase):
                                             for w in caught
                                         )
                                     )
-
-    def test_resolve_install_root_from_dev_config(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            dev = Path(tmp) / "dev"
-            install = Path(tmp) / "install"
-            for root in (dev, install):
-                root.mkdir(parents=True)
-                (root / "INSTRUCTIONS.md").write_text("# x", encoding="utf-8")
-            (dev / mc.DEV_CONFIG_NAME).write_text(
-                json.dumps({"install_root": str(install)}),
-                encoding="utf-8",
-            )
-            self.assertEqual(
-                mc.resolve_install_root(dev_root=dev),
-                install.resolve(),
-            )
-            self.assertTrue(mc.is_dev_project(dev))
-            self.assertFalse(mc.is_dev_project(install))
-
-    def test_resolve_install_root_from_dev_config_empty_install(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            dev = Path(tmp) / "dev"
-            install = Path(tmp) / "install"
-            dev.mkdir(parents=True)
-            install.mkdir(parents=True)
-            (dev / "INSTRUCTIONS.md").write_text("# dev", encoding="utf-8")
-            (dev / mc.DEV_CONFIG_NAME).write_text(
-                json.dumps({"install_root": str(install)}),
-                encoding="utf-8",
-            )
-            self.assertEqual(
-                mc.resolve_install_root(dev_root=dev),
-                install.resolve(),
-            )
-
-    def test_dev_config_install_root_over_env(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            dev = Path(tmp) / "dev"
-            install = Path(tmp) / "install"
-            other = Path(tmp) / "other"
-            for root in (dev, install, other):
-                root.mkdir(parents=True)
-                (root / "INSTRUCTIONS.md").write_text("# x", encoding="utf-8")
-            (dev / mc.DEV_CONFIG_NAME).write_text(
-                json.dumps({"install_root": str(install)}),
-                encoding="utf-8",
-            )
-            with mock.patch.dict(
-                os.environ, {"AGENT_MEMORY_FRAMEWORK": str(other)}
-            ):
-                self.assertEqual(
-                    mc.resolve_install_root(dev_root=dev),
-                    install.resolve(),
-                )
 
 
 if __name__ == "__main__":

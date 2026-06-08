@@ -3,12 +3,12 @@ name: agent-memory
 description: >
   Single entry for Cursor agent memory. Sync with "sync with agent memory". Routes layers
   by task — distill with ## Next step forward pointer, global context, feedback.
-  MEMORY_HOME at install clone memory/. Do NOT load all layers every session.
+  MEMORY_HOME at <clone>/memory/. Do NOT load all layers every session.
 ---
 
 # Agent Memory
 
-**Version:** 0.9.2 — see [VERSIONING.md](VERSIONING.md)
+**Version:** 0.11.0 — see [VERSIONING.md](VERSIONING.md)
 
 **Full protocol:** [INSTRUCTIONS.md](INSTRUCTIONS.md) · **Overview:** [ARCHITECTURE.md](ARCHITECTURE.md)
 
@@ -16,12 +16,10 @@ description: >
 
 | Variable | Meaning | Resolve order |
 |----------|---------|---------------|
-| `$FRAMEWORK_ROOT` | Install clone (Cursor symlink target) | `~/.cursor/hooks/agent-memory.env` → `memory/config.json` |
-| `$MEMORY_HOME` | `<install>/memory/` (gitignored) | `--memory-home` → env → hook env → install hub |
+| `$FRAMEWORK_ROOT` | This framework clone (Cursor symlink target) | hook env → `memory/config.json` → script location |
+| `$MEMORY_HOME` | `<clone>/memory/` (gitignored) | `--memory-home` → env → hook env → framework hub |
 
 Legacy XDG cursor-agent-memory config is read-only fallback (deprecated).
-
-Dev clone (`dev.config.json`) stays clean — no `memory/` there. Sync code: `scripts/sync-to-install.sh`.
 
 Set `FRAMEWORK_ROOT` to this skill's repo root (the symlink target) before running scripts.
 

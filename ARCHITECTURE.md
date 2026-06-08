@@ -13,19 +13,16 @@ Cursor agents start each session with no durable memory. Project rules help for 
 
 This framework is a **routed memory system**: small INDEX-first files, explicit layer choice per task, rotation at size limits, and tooling so agents never load megabyte jsonl transcripts.
 
-## Two clones on disk (recommended)
+## One clone on disk
 
-| Location | Role | Git / user data |
-|----------|------|-----------------|
-| **Dev** (`cursor-agent-memory`, any path) | Edit framework, run tests, push to GitHub | **Clean clone only** — no `memory/`, no `dev.config.json` in git |
-| **Install** (`$FRAMEWORK_ROOT`, path in `dev.config.json`) | Cursor skills + hooks point here | Framework in git; hub at `<install>/memory/` **gitignored** |
-| **Data hub** (`$MEMORY_HOME`) | Context, feedback, chats, manifest | **Never committed** — lives under install clone |
+| Location | Role | Git |
+|----------|------|-----|
+| **`$FRAMEWORK_ROOT`** (this repo) | Skills, scripts, templates, INSTRUCTIONS | **yes** |
+| **`$MEMORY_HOME`** (`<clone>/memory/`) | Context, feedback, chats, manifest | **never** (gitignored) |
 
-Dev → install: `bash scripts/sync-to-install.sh` (excludes `memory/`, `.git`, `dev.config.json`).
+Path resolution: CLI `--memory-home` / `--framework-root` → env → `~/.cursor/hooks/agent-memory.env` → `<clone>/memory/config.json` → script location.
 
-Single-clone setup (no `dev.config.json`) is still supported: hub defaults to `<clone>/memory/`.
-
-Path resolution: `dev.config.json` → env → `<install>/memory/config.json`. Cursor integration (only external writes): `~/.cursor/hooks/agent-memory.env`.
+Contributions: PR → `main` with CI ([CONTRIBUTING.md](CONTRIBUTING.md)).
 
 ## Layer model
 

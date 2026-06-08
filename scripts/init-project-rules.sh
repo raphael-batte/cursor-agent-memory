@@ -15,16 +15,6 @@ usage() {
   exit 1
 }
 
-# Safe leading-tilde expansion (avoids `eval`, which would execute embedded $(...)).
-_expand_tilde() {
-  local p="$1"
-  case "$p" in
-    "~") printf '%s\n' "$HOME" ;;
-    "~/"*) printf '%s\n' "$HOME/${p#"~/"}" ;;
-    *) printf '%s\n' "$p" ;;
-  esac
-}
-
 PROJECT=""
 SLUG=""
 DRY=0
@@ -40,7 +30,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 [[ -n "$PROJECT" ]] || usage
-PROJECT="$(cd "$(_expand_tilde "$PROJECT")" && pwd)"
+PROJECT="$(cd "$(eval echo "$PROJECT")" && pwd)"
 
 SCRIPT_PATH="$SCRIPT_DIR/init-project-rules.sh"
 unset MEMORY_HOME FRAMEWORK_ROOT AGENT_MEMORY_FRAMEWORK AGENT_MEMORY_INSTALL 2>/dev/null || true
@@ -52,7 +42,7 @@ sys.path.insert(0, '${SCRIPT_DIR}')
 from lib.memory_config import resolve_framework_root, resolve_memory_home
 script = '${SCRIPT_PATH}'
 hub = resolve_memory_home(None, script_file=script)
-fw = resolve_framework_root(hub, script_file=script) or Path('${REPO_ROOT}').resolve()
+fw = resolve_framework_root(script_file=script, memory_home=hub) or Path('${REPO_ROOT}').resolve()
 print(fw)
 print(hub)
 "

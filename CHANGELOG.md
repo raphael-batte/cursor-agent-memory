@@ -6,6 +6,25 @@ Data hub (`$MEMORY_HOME`) is **not** versioned with this file.
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-06-08
+
+### Added
+
+- **CONTRIBUTING.md** — PR → `main` workflow, local tests, version bump rules
+- **PR template** — `.github/pull_request_template.md`
+- **CI version-check** — `scripts/check-version-bump.py` on pull requests
+
+### Changed
+
+- **Single-clone model** — framework + gitignored `memory/` hub in one repo; simplified path resolution in `memory_config.py` and `config.sh`
+- **Docs** — README, ARCHITECTURE, ONBOARDING, MIGRATION, SKILL, INSTRUCTIONS — prod-only setup (no dev/install narrative)
+
+### Removed
+
+- `dev.config.json` / `dev.config.json.example` and two-clone workflow
+- `scripts/sync-to-install.sh`
+- `.cursor/rules/cursor-agent-memory-dev.mdc`
+
 ## [0.10.2] - 2026-06-07
 
 ### Added

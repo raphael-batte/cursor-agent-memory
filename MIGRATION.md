@@ -2,8 +2,8 @@
 
 Move an existing memory hub to this framework, wire Cursor skills, and distill chats.
 
-**Framework (git):** `$FRAMEWORK_ROOT` — install clone Cursor points at.  
-**Data hub (never git):** `$MEMORY_HOME` — default `<install>/memory/` (gitignored).
+**Framework (git):** `$FRAMEWORK_ROOT` — this clone (skills, scripts, hooks).  
+**Data hub (never git):** `$MEMORY_HOME` — default `<clone>/memory/` (gitignored).
 
 Setup: [ONBOARDING.md](ONBOARDING.md)
 
@@ -12,8 +12,8 @@ Setup: [ONBOARDING.md](ONBOARDING.md)
 ## 1. Fresh machine
 
 ```bash
-git clone https://github.com/raphael-batte/cursor-agent-memory.git <install-clone>
-cd <install-clone>
+git clone https://github.com/raphael-batte/cursor-agent-memory.git
+cd cursor-agent-memory
 export FRAMEWORK_ROOT="$(pwd)"
 bash scripts/link-cursor-skills.sh --force
 bash scripts/init-memory.sh
@@ -33,8 +33,8 @@ Example `$MEMORY_HOME/config.json`:
 
 ```json
 {
-  "framework_root": "/path/to/install-clone",
-  "memory_home": "/path/to/install-clone/memory"
+  "framework_root": "/path/to/cursor-agent-memory",
+  "memory_home": "/path/to/cursor-agent-memory/memory"
 }
 ```
 
@@ -59,20 +59,7 @@ python3 "$FRAMEWORK_ROOT/scripts/memory-doctor.py" --fix
 
 ---
 
-## 3. Dev + install split
-
-If you edit framework in a **dev** clone:
-
-```bash
-cp dev.config.json.example dev.config.json   # set install_root
-bash scripts/sync-to-install.sh
-```
-
-Dev clone stays clean — no `memory/` there.
-
----
-
-## 4. Secrets (hard requirement)
+## 3. Secrets (hard requirement)
 
 **Never** put passwords, tokens, API keys, JWT, private keys, or `.env` values into `$MEMORY_HOME`.
 
@@ -82,7 +69,7 @@ python3 "$FRAMEWORK_ROOT/scripts/verify-memory.py" --memory-home "$MEMORY_HOME"
 
 ---
 
-## 5. Chat distill workflow
+## 4. Chat distill workflow
 
 **Do not** paste raw `.jsonl` into chat.
 
@@ -102,13 +89,13 @@ Framework: `git pull` in `$FRAMEWORK_ROOT` separately. Never push secrets — ru
 
 ---
 
-## 6. Forward pointer (replaces handoff)
+## 5. Forward pointer (replaces handoff)
 
 `chats/projects/<slug>.md` **## Next step** is updated automatically on boundary distills (`lib/forward_pointer.py`). Legacy `AGENT_HANDOFF.md` in repos is ignored by the framework — migrate next-step text into distill or delete handoff files.
 
 ---
 
-## 7. Agent prompts
+## 6. Agent prompts
 
 **First-time:** `sync with agent memory`
 
@@ -128,14 +115,14 @@ python3 "$FRAMEWORK_ROOT/scripts/memory-doctor.py" --memory-home "$MEMORY_HOME" 
 
 ---
 
-## 8. Troubleshooting
+## 7. Troubleshooting
 
 | Problem | Fix |
 |---------|-----|
-| Scripts can't find hub | `dev.config.json` install_root, or `--memory-home`, or `memory-doctor --fix` |
+| Scripts can't find hub | `bash scripts/init-memory.sh`, or `--memory-home`, or `memory-doctor --fix` |
 | Second Mac / synced hub | [ONBOARDING → Second machine](ONBOARDING.md#second-machine-same-hub-new-mac) |
 | Legacy XDG config | Read-only — migrate to hook env + `memory/config.json` |
-| Skills point to old path | `link-cursor-skills.sh --force` from install clone |
+| Skills point to old path | `link-cursor-skills.sh --force` from framework clone |
 | `list-chats` STALE | Re-distill when transcript mtime > `distilled_at` |
 | verify fails | Remove secrets; fix manifest/GLOBAL_CONTEXT |
 

@@ -228,7 +228,9 @@ def main() -> int:
         args.memory_home, script_file=str(SCRIPT_DIR / "sync-memory.py")
     )
     framework_root = resolve_framework_root(
-        memory_home, args.framework_root, script_file=str(SCRIPT_DIR / "sync-memory.py")
+        args.framework_root,
+        script_file=str(SCRIPT_DIR / "sync-memory.py"),
+        memory_home=memory_home,
     )
     if framework_root is None:
         framework_root = REPO_ROOT

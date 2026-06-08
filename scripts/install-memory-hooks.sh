@@ -59,12 +59,12 @@ chmod +x "$HOOKS_DIR/agent-memory-session-start.sh" \
   "$HOOKS_DIR/agent-memory-session-end.sh" \
   "$HOOKS_DIR/agent-memory-after-edit.sh"
 
-INSTALL_ROOT="$(resolve_install_root "" "$REPO_ROOT")"
-if [[ -z "$INSTALL_ROOT" ]]; then
-  INSTALL_ROOT="$REPO_ROOT"
+FRAMEWORK_ROOT="$(resolve_framework_root "" "$REPO_ROOT")"
+if [[ -z "$FRAMEWORK_ROOT" ]]; then
+  FRAMEWORK_ROOT="$REPO_ROOT"
 fi
-MEMORY_HOME="$(resolve_memory_home "" "$INSTALL_ROOT")"
-write_cursor_hook_env "$INSTALL_ROOT" "$MEMORY_HOME"
+MEMORY_HOME="$(resolve_memory_home "" "$FRAMEWORK_ROOT")"
+write_cursor_hook_env "$FRAMEWORK_ROOT" "$MEMORY_HOME"
 ENV_FILE="$HOOKS_DIR/agent-memory.env"
 
 python3 -c "

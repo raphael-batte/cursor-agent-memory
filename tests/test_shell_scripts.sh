@@ -68,16 +68,11 @@ echo "$weekly_out" | grep -q "memory-health"
 echo "$weekly_out" | grep -q "update-baseline"
 test -x "$ROOT/scripts/weekly-verify.sh"
 
-# sync-to-install dry-run (dev + install layout)
-DEV_CLONE="$TMP/dev-clone"
-INSTALL_CLONE="$TMP/install-clone"
-mkdir -p "$DEV_CLONE/scripts" "$INSTALL_CLONE"
-cp "$ROOT/INSTRUCTIONS.md" "$DEV_CLONE/"
-cp "$ROOT/VERSION" "$DEV_CLONE/"
-cp -r "$ROOT/scripts" "$DEV_CLONE/"
-echo '{"install_root":"'"$INSTALL_CLONE"'"}' > "$DEV_CLONE/dev.config.json"
-sync_out="$(bash "$DEV_CLONE/scripts/sync-to-install.sh" --dry-run 2>&1)"
-echo "$sync_out" | grep -q "would rsync"
-echo "$sync_out" | grep -q "$INSTALL_CLONE"
+# init-memory on empty hub
+INIT_HUB="$TMP/init-hub"
+mkdir -p "$INIT_HUB"
+MEMORY_HOME="$INIT_HUB" bash "$ROOT/scripts/init-memory.sh" >/dev/null
+test -f "$INIT_HUB/config.json"
+test -f "$INIT_HUB/chats/manifest.json"
 
 echo "shell tests: OK"

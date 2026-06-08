@@ -97,7 +97,9 @@ def main() -> int:
 
     memory_home = resolve_memory_home(args.memory_home, script_file=__file__)
     framework_root = resolve_framework_root(
-        memory_home, args.framework_root, script_file=__file__
+        args.framework_root,
+        script_file=__file__,
+        memory_home=memory_home,
     )
     if args.fix or args.fix_dry_run:
         if framework_root is None:

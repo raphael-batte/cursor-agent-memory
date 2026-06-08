@@ -45,9 +45,13 @@ git init
 bash scripts/install-git-hooks.sh
 ```
 
+## Pull requests
+
+All changes go through PR → `main`. CI runs tests, gitleaks, and version-check. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Release tags
 
-After a meaningful milestone:
+After merge to `main`:
 
 ```bash
 git tag -a v$(cat VERSION) -m "cursor-agent-memory $(cat VERSION)"
