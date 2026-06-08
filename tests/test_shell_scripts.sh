@@ -14,6 +14,24 @@ echo '{"processed":[],"pending":[]}' > "$OLD_HUB/chats/manifest.json"
 mkdir -p "$OLD_HUB/feedback"
 echo -e "## T\n\n+ win" > "$OLD_HUB/feedback/wins.md"
 
+# plugin bundle layout
+test -f "$ROOT/.cursor-plugin/plugin.json"
+test -f "$ROOT/hooks/hooks.json"
+test -f "$ROOT/skills/agent-memory/SKILL.md"
+python3 -c "
+import json
+from pathlib import Path
+hooks = json.loads(Path('$ROOT/hooks/hooks.json').read_text())
+assert 'sessionStart' in hooks['hooks']
+assert 'workspaceOpen' in hooks['hooks']
+"
+
+# simulate install-local (tmp only — never touch real ~/.cursor)
+PLUGIN_DST="$TMP/plugins/local/agent-memory"
+mkdir -p "$(dirname "$PLUGIN_DST")"
+ln -sfn "$ROOT" "$PLUGIN_DST"
+test -f "$PLUGIN_DST/.cursor-plugin/plugin.json"
+
 # migrate
 bash "$ROOT/scripts/migrate-memory.sh" --from "$OLD_HUB" --to "$NEW_HUB"
 test -f "$NEW_HUB/context/conventions.md"
@@ -25,10 +43,9 @@ echo "KEEP" > "$NEW_HUB/context/conventions.md"
 bash "$ROOT/scripts/migrate-memory.sh" --from "$OLD_HUB" --to "$NEW_HUB"
 grep -q "KEEP" "$NEW_HUB/context/conventions.md"
 
-# link dry-run (legacy script — still smoke-tested for deprecation path)
-link_out="$(bash "$ROOT/scripts/link-cursor-skills.sh" --only agent-memory --dry-run \
-  --framework-root "$ROOT" 2>&1)"
-echo "$link_out" | grep -qE 'would link|exists:|deprecated'
+# first-run scope CLI
+python3 "$ROOT/scripts/first-run-scope.py" --memory-home "$NEW_HUB" --preset 7d >/dev/null
+test -f "$NEW_HUB/.state/first-run-scope.json"
 
 # skills-status
 bash "$ROOT/scripts/skills-status.sh" \
@@ -41,26 +58,28 @@ resolved="$(resolve_memory_home "$NEW_HUB")"
 test "$(python3 -c "import os; print(os.path.realpath('${resolved}'))")" \
   = "$(python3 -c "import os; print(os.path.realpath('${NEW_HUB}'))")"
 
-# memory hooks install dry-run (capture — grep -q closes pipe → SIGPIPE on python tail)
-hooks_out="$(bash "$ROOT/scripts/install-memory-hooks.sh" --dry-run 2>&1)"
-echo "$hooks_out" | grep -q "agent-memory-session-start"
-echo "$hooks_out" | grep -q "agent-memory-boundary"
-echo "$hooks_out" | grep -q "agent-memory-session-end"
-
 # boundary-hooks CLI (session-start catchup JSON)
 TEST_WS="$TMP/workspace"
 mkdir -p "$TEST_WS"
 boundary_out="$(printf '%s' '{"workspace_roots":["'"$TEST_WS"'"]}' \
-  | python3 "$ROOT/scripts/boundary-hooks.py" session-start)"
+  | MEMORY_HOME="$NEW_HUB" python3 "$ROOT/scripts/boundary-hooks.py" session-start \
+    --memory-home "$NEW_HUB")"
 echo "$boundary_out" | python3 -c "import json,sys; d=json.load(sys.stdin); assert 'catchup' in d"
 
 # sync-memory scan-only
 scan_out="$(python3 "$ROOT/scripts/sync-memory.py" --memory-home "$NEW_HUB" --scan-only 2>/dev/null)"
 echo "$scan_out" | python3 -c "import json,sys; d=json.load(sys.stdin); assert 'pending_90d' in d"
 
-# sync-memory dry-run
-sync_out="$(python3 "$ROOT/scripts/sync-memory.py" --memory-home "$NEW_HUB" --dry-run --no-hooks 2>/dev/null)"
+# sync-memory dry-run (plugin skips legacy hooks by default)
+sync_out="$(python3 "$ROOT/scripts/sync-memory.py" --memory-home "$NEW_HUB" --dry-run 2>/dev/null)"
 echo "$sync_out" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('dry_run') is True; assert d.get('distills')==0"
+
+EMPTY_PR="$TMP/empty-projects"
+mkdir -p "$EMPTY_PR"
+sync_hooks="$(python3 "$ROOT/scripts/sync-memory.py" --memory-home "$NEW_HUB" \
+  --projects-root "$EMPTY_PR" 2>/dev/null || true)"
+echo "$sync_hooks" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['hooks'].get('reason')=='plugin_hooks_in_bundle'"
+
 chmod +x "$ROOT/scripts/weekly-verify.sh"
 weekly_out="$(bash "$ROOT/scripts/weekly-verify.sh" --dry-run 2>&1)"
 echo "$weekly_out" | grep -q "would run memory-doctor"

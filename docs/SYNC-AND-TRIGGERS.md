@@ -5,7 +5,7 @@ Technical reference for distill-first memory with **forward pointer** (`## Next 
 ## Design goals
 
 1. **Distill-first** — `chats/projects/<slug>.md` is primary history and forward pointer.
-2. **Chat links** — Recent lines include `[title](uuid)` when transcript jsonl exists.
+2. **Plugin hooks** — bundle `hooks/hooks.json`; no global hooks merge in normal install.
 3. **One skill** — `agent-memory` routes all layers.
 4. **Event-driven** — distill on session boundaries; `apply=True` updates Recent + Next step.
 
@@ -15,48 +15,59 @@ Technical reference for distill-first memory with **forward pointer** (`## Next 
 
 ```json
 {
+  "plugin_root": "",
   "framework_root": "",
   "memory_home": ""
 }
 ```
 
-## Triggers
+Anchor (fixed): `~/.cursor/agent-memory/config.json` → `{ "memory_home": "..." }`.
+
+## Triggers (plugin bundle)
 
 | Cursor event | Script | Action |
 |--------------|--------|--------|
-| `sessionStart` | `agent-memory-session-start.sh` | Catch-up distill (≤5 chats, 180d, current workspace) |
-| `sessionEnd` | `agent-memory-boundary.sh` | Distill + apply → Recent + **Next step** |
-| `sessionEnd` | `agent-memory-session-end.sh` | Checklist log |
-| `preCompact` | `agent-memory-boundary.sh` | Distill + reminder |
-| `afterFileEdit` | `agent-memory-after-edit.sh` | Log chats hub edits |
+| `sessionStart` / `workspaceOpen` | `hooks/agent-memory-session-start.sh` | First-run bootstrap; catch-up distill |
+| `sessionEnd` | `hooks/agent-memory-boundary.sh` | Distill + apply → Recent + **Next step** |
+| `sessionEnd` | `hooks/agent-memory-session-end.sh` | Checklist log |
+| `preCompact` | `hooks/agent-memory-boundary.sh` | Distill + reminder |
+| `afterFileEdit` | `hooks/agent-memory-after-edit.sh` | Log chats hub edits |
 
-## sync-memory.py
+## First run (`lib/first_run.py`)
+
+1. Idempotent `init-memory` + anchor
+2. Scan transcripts — auto-distill if ≤40 pending (90d), else `user_message` with scope presets
+3. Agent runs `first-run-scope.py` + `first-run-continue.py`
+4. Sentinel: `$MEMORY_HOME/.state/initialized`
+
+## sync-memory.py (manual batch)
 
 1. `init-memory.sh` (idempotent)
-2. `install-memory-hooks.sh`
-3. List pending chats in `--days` window
-4. `distill-merge` each with `apply=True`, `bootstrap_decisions=True` on first sync
-5. Bootstrap `GLOBAL_CONTEXT.md` Projects table
-6. `verify-memory.py`
+2. List pending chats in `--days` window
+3. `distill-merge` each with `apply=True`, `bootstrap_decisions=True` on first sync
+4. Bootstrap `GLOBAL_CONTEXT.md` Projects table
+5. `verify-memory.py`
+
+Does **not** install legacy global hooks when plugin manifest is present.
 
 CLI: `--scan-only`, `--dry-run`, `--no-hooks`, `--days`, `--limit`.
 
 ## Forward pointer
 
-`lib/forward_pointer.py` — heuristics on transcript tail with **confidence** tier. Hooks write `## Next step` mechanically; on placeholder or low confidence, `sessionEnd` emits `user_message` pointing to `pointer-curate-prompt.md` for **agent curation** (regex = fallback only).
+`lib/forward_pointer.py` — heuristics on transcript tail with **confidence** tier. Hooks write `## Next step` mechanically; on placeholder or low confidence, `sessionEnd` emits `user_message` for agent curation.
 
 ## Distill freshness (v0.10+)
 
-- **Watermark** — `manifest.json` stores `watermark_user_count` + `watermark_tail_hash`; redistill when ≥2 new user messages or tail changes (not mtime alone).
-- **Debounce** — same chat within 30s on `preCompact`/`sessionEnd` → one distill.
-- **Metrics** — `logs/agent-memory-metrics.jsonl`; `memory-health.py` tracks pointer hit-rate vs rolling baseline in `logs/health-baseline.json`.
+- **Watermark** — `manifest.json` stores `watermark_user_count` + `watermark_tail_hash`
+- **Debounce** — `lib/boundary_debounce.py` limits repeat boundary distills
+- **Long chats** — map-reduce staging; semantic-merge for Decisions
 
-## Modules
+## Key modules
 
 | Module | Role |
 |--------|------|
-| `lib/forward_pointer.py` | Next step extraction |
-| `lib/distill_links.py` | `[title](uuid)` in Recent |
-| `lib/pending_chats.py` | Pending/stale scan |
-| `lib/boundary_hooks.py` | Hook dispatch + apply |
+| `lib/pending_chats.py` | Scan + pending list |
+| `lib/boundary_hooks.py` | Hook dispatch |
+| `lib/first_run.py` | Plugin first-run bootstrap |
 | `lib/global_context_bootstrap.py` | Projects table |
+| `lib/forward_pointer.py` | ## Next step heuristics |

@@ -13,10 +13,9 @@ Setup: [ONBOARDING.md](ONBOARDING.md)
 ## 1. Fresh install
 
 ```bash
-git clone https://github.com/raphael-batte/cursor-agent-memory.git
-cd cursor-agent-memory
+# from your clone of github.com/raphael-batte/cursor-agent-memory
 bash scripts/install-local.sh
-# Reload Cursor
+# Reload Cursor — first sessionStart bootstraps hub; or:
 bash scripts/init-memory.sh
 ```
 
@@ -120,11 +119,10 @@ python3 scripts/verify-memory.py --memory-home "$MEMORY_HOME" --strict-secrets
 | First-time setup | [ONBOARDING.md](ONBOARDING.md) |
 | Old hub path | §2 migrate + `memory-doctor.py --fix` |
 | Double distill / duplicate hooks | §3 legacy cleanup |
-| Multi-device (future) | Obsidian export/import — not in v1 |
 
 Repair paths:
 
 ```bash
 python3 scripts/memory-doctor.py --fix
-bash scripts/install-local.sh && # Reload Cursor
+bash scripts/install-local.sh   # then Reload Cursor
 ```

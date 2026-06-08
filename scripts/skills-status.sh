@@ -110,7 +110,7 @@ else
     fi
     echo "  $name — $state"
   done
-  echo "  Unlinked: $unlinked (link: link-cursor-skills.sh --personal <name>)"
+  echo "  Unlinked: $unlinked (add under hub/skills/; plugin loads bundle skills)"
 fi
 echo
 

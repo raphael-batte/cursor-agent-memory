@@ -47,7 +47,13 @@ def _run_init(framework_root: Path, memory_home: Path) -> dict:
     }
 
 
+def _is_plugin_bundle(framework_root: Path) -> bool:
+    return (framework_root / ".cursor-plugin" / "plugin.json").is_file()
+
+
 def _install_hooks(framework_root: Path) -> dict:
+    if _is_plugin_bundle(framework_root):
+        return {"status": "skipped", "reason": "plugin_hooks_in_bundle"}
     script = framework_root / "scripts" / "install-memory-hooks.sh"
     if not script.is_file():
         return {"status": "skipped", "reason": "no_hooks_installer"}

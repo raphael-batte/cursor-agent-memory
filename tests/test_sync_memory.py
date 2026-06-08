@@ -50,6 +50,19 @@ class TestSyncMemory(unittest.TestCase):
             self.assertIn("pending_90d", stats)
             self.assertIn("pending_180d", stats)
 
+    def test_plugin_bundle_skips_legacy_hooks(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            hub = Path(tmp) / "hub"
+            minimal_hub(hub, projects=1)
+            report = sm.run_sync(
+                memory_home=hub,
+                framework_root=REPO_ROOT,
+                dry_run=False,
+                install_hooks=True,
+                projects_root=hub,
+            )
+            self.assertEqual(report["hooks"].get("reason"), "plugin_hooks_in_bundle")
+
     def test_sync_hub_config_has_no_legacy_handoff_mode(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             hub = Path(tmp) / "hub"

@@ -9,9 +9,9 @@ One skill, one sync command. Framework repo is **English-only**; your `$MEMORY_H
 
 ## Quick start
 
+From [the repo](https://github.com/raphael-batte/cursor-agent-memory) (clone anywhere), then:
+
 ```bash
-git clone https://github.com/raphael-batte/cursor-agent-memory.git
-cd cursor-agent-memory
 bash scripts/install-local.sh
 ```
 

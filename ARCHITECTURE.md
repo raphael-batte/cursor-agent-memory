@@ -56,7 +56,7 @@ Deploy / CI / git task  → conventions.md
 Proposing architecture  → fails + wins + preferences (Flow E)
 ```
 
-Boundary hooks distill on `sessionStart` (catch-up), `sessionEnd`, `preCompact`. One-shot bootstrap: `sync-memory.py`.
+Boundary hooks distill on `sessionStart` (first-run + catch-up), `workspaceOpen`, `sessionEnd`, `preCompact`. Manual batch: `sync-memory.py`.
 
 Full routing table and self-checks: [INSTRUCTIONS.md → Session start](INSTRUCTIONS.md#session-start).
 
@@ -84,14 +84,12 @@ Details: [INSTRUCTIONS.md → Chat memory](INSTRUCTIONS.md#chat-memory-chats) ·
 
 ## Skills and hooks
 
-**Default install:** one symlink — `agent-memory` (`SKILL.md`). Other protocols live under `skills/*/SKILL.md` for on-demand Read.
-
-Cursor hooks (`install-memory-hooks.sh`, run by sync):
+**Plugin bundle** ships `skills/agent-memory/SKILL.md` and `hooks/hooks.json` (no global `~/.cursor/hooks.json` merge). Other protocols under `skills/*/SKILL.md` for on-demand Read.
 
 | Hook | Role |
 |------|------|
-| `sessionStart` | Catch-up distill for open workspace |
-| `sessionEnd` / `preCompact` | Distill current chat; checklist log |
+| `sessionStart` / `workspaceOpen` | First-run bootstrap; catch-up distill |
+| `sessionEnd` / `preCompact` | Distill current chat; pointer queue |
 | `afterFileEdit` | Log chats hub edits |
 
 See [docs/SYNC-AND-TRIGGERS.md](docs/SYNC-AND-TRIGGERS.md) · [ONBOARDING.md](ONBOARDING.md).

@@ -6,6 +6,16 @@ Data hub (`$MEMORY_HOME`) is **not** versioned with this file.
 
 ## [Unreleased]
 
+## [0.12.2] - 2026-06-08
+
+### Changed
+
+- **README** — plugin-first quick start; no git-clone hero; streamlined docs map
+- **ARCHITECTURE / INSTRUCTIONS / SYNC-AND-TRIGGERS** — plugin hooks; removed legacy install narrative
+- **sync-memory.py** — skips `install-memory-hooks.sh` when `.cursor-plugin/plugin.json` present
+- **Shell tests** — plugin bundle layout, `first-run-scope`, legacy hook tests removed
+- **MIGRATION** — removed backlog items from public quick reference
+
 ## [0.12.1] - 2026-06-08
 
 ### Added
