@@ -11,6 +11,7 @@ Data hub (`$MEMORY_HOME`) is **not** versioned with this file.
 ### Fixed
 
 - Strip legacy narrative; guard test; plugin logo
+- CI: timezone-independent `test_same_day_redistill_with_iso` (GitHub runners before 09:00 UTC)
 
 ## [0.12.2] - 2026-06-08
 
