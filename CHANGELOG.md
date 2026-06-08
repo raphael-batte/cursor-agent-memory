@@ -6,6 +6,13 @@ Data hub (`$MEMORY_HOME`) is **not** versioned with this file.
 
 ## [Unreleased]
 
+## [0.12.4] - 2026-06-08
+
+### Changed
+
+- **Descriptions** — plugin.json, SKILL frontmatter, README, GitHub about: secrets redaction + verify/gitleaks
+- **Schema** — README mermaid security layer; `manifest.json` `_schema.secrets_policy`
+
 ## [0.12.3] - 2026-06-08
 
 ### Fixed

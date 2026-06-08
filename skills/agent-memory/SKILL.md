@@ -3,12 +3,13 @@ name: agent-memory
 description: >
   Single entry for Cursor agent memory. Sync with "sync with agent memory". Routes layers
   by task — distill with ## Next step forward pointer, global context, feedback.
+  Secrets redaction on extract; verify-memory + gitleaks guard the hub (never store credentials).
   Hub outside plugin bundle. Do NOT load all layers every session.
 ---
 
 # Agent Memory
 
-**Version:** 0.12.3 — see [VERSIONING.md](../../VERSIONING.md)
+**Version:** 0.12.4 — see [VERSIONING.md](../../VERSIONING.md)
 
 **Full protocol:** [INSTRUCTIONS.md](../../INSTRUCTIONS.md) · **Overview:** [ARCHITECTURE.md](../../ARCHITECTURE.md)
 

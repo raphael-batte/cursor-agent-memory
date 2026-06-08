@@ -5,7 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 REPO="raphael-batte/cursor-agent-memory"
-GITHUB_DESCRIPTION='Persistent working memory for Cursor. Routed layers, private hub, one @agent-memory skill, auto-distill on session boundaries, ## Next step forward pointer + transcript drill-down. MIT.'
+GITHUB_DESCRIPTION='Persistent working memory for Cursor. Routed layers, private hub, one @agent-memory skill, auto-distill + ## Next step pointer. Secrets redaction on distill; verify-memory + gitleaks guard the hub. MIT.'
 VERSION="$(tr -d '[:space:]' < "$REPO_ROOT/VERSION")"
 
 cd "$REPO_ROOT"

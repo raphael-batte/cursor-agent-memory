@@ -228,7 +228,8 @@ chats/
 {
   "_schema": {
     "date": "transcript last activity (file mtime)",
-    "distilled_at": "when distill merged into projects/*.md"
+    "distilled_at": "when distill merged into projects/*.md",
+    "secrets_policy": "no credentials in hub; distill redacts; verify-memory weekly"
   },
   "processed": [
     {

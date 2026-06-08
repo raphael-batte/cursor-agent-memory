@@ -1,6 +1,6 @@
 # Cursor Agent Memory
 
-**Version:** 0.12.3 — see [VERSIONING.md](VERSIONING.md)
+**Version:** 0.12.4 — see [VERSIONING.md](VERSIONING.md)
 Created by [raphaelbatte](https://github.com/raphael-batte) · [raphbatte.com](https://raphbatte.com)
 
 ## What this is
@@ -10,6 +10,7 @@ Created by [raphaelbatte](https://github.com/raphael-batte) · [raphbatte.com](h
 - **Global context** — who you are, which projects, cross-repo rules, infra
 - **Feedback** — what worked (+) and what to stop proposing (−)
 - **Chat memory** — distilled transcripts + **`## Next step`** forward pointer (auto on hooks)
+- **Security** — redact secrets on distill; `verify-memory` scans the hub (regex + optional gitleaks); CI runs gitleaks on every push
 
 Agents load **one layer per task** (INDEX-first). Weak pointer → drill transcript via `[title](uuid)` in distill (never bulk jsonl).
 
@@ -55,10 +56,15 @@ flowchart TB
     CH["chats/projects/*.md"]
     MF[manifest.json]
   end
+  subgraph guard ["Security"]
+    RD[distill redact]
+    VF[verify-memory + gitleaks]
+  end
   TR[Cursor transcripts]
   AG[Agent session]
 
-  TR -->|hooks distill| CH
+  TR --> RD --> CH
+  CH --> VF
   CH -->|## Next step| AG
   GC --> AG
   FB --> AG

@@ -1,7 +1,7 @@
 ---
 name: agent-memory
 description: >
-  Cursor agent memory — see skills/agent-memory/SKILL.md (plugin entry).
+  Cursor agent memory with secrets redaction and hub verification — see skills/agent-memory/SKILL.md.
 ---
 
 # Agent Memory
