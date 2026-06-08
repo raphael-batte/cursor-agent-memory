@@ -79,8 +79,6 @@ If you previously used symlink skills or global hooks:
 
 Then `install-local.sh` + Reload + `init-memory.sh` (idempotent).
 
-**Deprecated scripts** (still run with warnings): `link-cursor-skills.sh`, `install-memory-hooks.sh`.
-
 ---
 
 ## 4. Secrets (hard requirement)

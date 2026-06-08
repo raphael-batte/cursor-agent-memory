@@ -84,7 +84,7 @@ python3 scripts/memory-doctor.py --fix
 After switching to the plugin, **remove** to avoid double hooks/distill:
 
 - `~/.cursor/skills/agent-memory` symlink (if present)
-- `agent-memory-*` entries in `~/.cursor/hooks.json` (if you used `install-memory-hooks.sh`)
+- `agent-memory-*` entries in `~/.cursor/hooks.json` (pre-plugin global hooks)
 - Optional: `~/.cursor/hooks/agent-memory.env` (deprecated; anchor replaces it)
 
 ---

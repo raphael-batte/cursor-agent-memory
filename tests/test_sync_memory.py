@@ -63,7 +63,7 @@ class TestSyncMemory(unittest.TestCase):
             )
             self.assertEqual(report["hooks"].get("reason"), "plugin_hooks_in_bundle")
 
-    def test_sync_hub_config_has_no_legacy_handoff_mode(self) -> None:
+    def test_sync_hub_config_strips_legacy_hub_keys(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             hub = Path(tmp) / "hub"
             minimal_hub(hub, projects=1)
@@ -75,7 +75,8 @@ class TestSyncMemory(unittest.TestCase):
                 limit=0,
             )
             cfg = json.loads((hub / "config.json").read_text())
-            self.assertNotIn("handoff_mode", cfg)
+            for key in ("handoff_mode", "install_root", "dev_root"):
+                self.assertNotIn(key, cfg)
 
 
 if __name__ == "__main__":

@@ -5,8 +5,8 @@ set -euo pipefail
 _HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 source "$_HOOK_DIR/hook_env.sh"
-FRAMEWORK="$(resolve_hook_framework)" || {
-  echo "[agent-memory] framework root unknown — run install-memory-hooks.sh from your clone" >&2
+FRAMEWORK="$(resolve_hook_plugin_root)" || {
+  echo "[agent-memory] plugin root unknown — install plugin or run install-local.sh" >&2
   printf '%s\n' '{}'
   exit 0
 }

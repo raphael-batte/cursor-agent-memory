@@ -6,6 +6,12 @@ Data hub (`$MEMORY_HOME`) is **not** versioned with this file.
 
 ## [Unreleased]
 
+## [0.12.3] - 2026-06-08
+
+### Fixed
+
+- Strip legacy narrative; guard test; plugin logo
+
 ## [0.12.2] - 2026-06-08
 
 ### Changed

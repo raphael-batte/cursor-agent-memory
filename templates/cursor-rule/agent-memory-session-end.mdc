@@ -35,8 +35,8 @@ Last lines contain the sessionEnd checklist (also in stderr during hook run).
 
 ## Paths
 
-- Framework: `$FRAMEWORK_ROOT` from `~/.cursor/hooks/agent-memory.env`
-- Hub: `$MEMORY_HOME` from hook env or `<install>/memory/config.json`
+- Plugin: `$PLUGIN_ROOT` (bundle with skills + hooks)
+- Hub: `$MEMORY_HOME` (anchor `~/.cursor/agent-memory/config.json` or hub `config.json`)
 - Edit log: `~/.cursor/hooks/agent-memory-edit.log`
 
-Install hooks: `bash scripts/install-memory-hooks.sh`
+Plugin install: `bash scripts/install-local.sh` → Reload Cursor

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Cursor sessionEnd hook — checklist after boundary distill.
-# Install: bash scripts/install-memory-hooks.sh from your framework clone
+# Plugin: bash scripts/install-local.sh → Reload Cursor
 # Log: ~/.cursor/hooks/agent-memory-session.log (and stderr for Cursor UI)
 
 set -euo pipefail
@@ -8,8 +8,8 @@ set -euo pipefail
 _HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 source "$_HOOK_DIR/hook_env.sh"
-FRAMEWORK="$(resolve_hook_framework)" || {
-  echo "[agent-memory] framework root unknown — run install-memory-hooks.sh from your clone" >&2
+FRAMEWORK="$(resolve_hook_plugin_root)" || {
+  echo "[agent-memory] plugin root unknown — install plugin or run install-local.sh" >&2
   exit 0
 }
 MEMORY_HOME="$(resolve_hook_memory_home 2>/dev/null || true)"

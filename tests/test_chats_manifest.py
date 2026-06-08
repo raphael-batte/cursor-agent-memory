@@ -30,7 +30,7 @@ class TestChatsManifest(unittest.TestCase):
     def test_primary_project_rel_prefers_manifest(self) -> None:
         manifest = {
             "processed": [
-                {"id": "x", "distilled_to": ["projects/other-app.md", "handoff/x.md"]}
+                {"id": "x", "distilled_to": ["projects/other-app.md", "archive/x.md"]}
             ]
         }
         rel = cm.primary_project_rel(manifest, "x", workspace_slug="example-app")

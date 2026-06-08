@@ -22,5 +22,5 @@ Stable rules for all repos. Session deltas → chats/projects ## Next step.
 
 ## Agent memory
 
-- **Hub:** `$MEMORY_HOME` (`<install>/memory/`, gitignored)
+- **Hub:** `$MEMORY_HOME` (outside plugin bundle; path from anchor)
 - **Session order:** distill ## Next step first (Flow A); other layers on demand

@@ -134,7 +134,8 @@ class TestMemoryConfig(unittest.TestCase):
             )
             hub_cfg = json.loads((hub / "config.json").read_text())
             self.assertEqual(hub_cfg["plugin_root"], str(plugin.resolve()))
-            self.assertNotIn("handoff_mode", hub_cfg)
+            for key in ("handoff_mode", "install_root", "dev_root"):
+                self.assertNotIn(key, hub_cfg)
 
     def test_framework_version(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

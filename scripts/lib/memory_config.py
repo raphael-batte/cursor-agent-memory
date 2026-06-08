@@ -212,6 +212,7 @@ def persist_hub_config(
         if hub_cfg.get(key) != val:
             hub_cfg[key] = val
             changed = True
+    # Strip removed concepts from older hub configs (not part of current model).
     for legacy_key in ("install_root", "dev_root", "handoff_mode"):
         if legacy_key in hub_cfg:
             del hub_cfg[legacy_key]
