@@ -2,11 +2,11 @@
 
 ## What this is
 
-Cursor forgets everything when a session ends. This plugin gives it persistent memory across three layers:
+Cursor has no memory between sessions. Each new chat starts from scratch, with no knowledge of your projects, past decisions, or where you left off. This plugin gives it persistent memory across three layers:
 
-- **Who you are** — global context, projects, cross-repo rules
-- **What worked** — feedback on good and bad agent decisions
-- **Where you left off** — distilled chat history with a **Next step** pointer, updated automatically
+- **Who you are**. Global context, projects, cross-repo rules
+- **What worked** .Feedback on good and bad agent decisions
+- **Where you left off**. Distilled chat history with a **Next step** pointer, updated automatically
 
 Memory lives in private files outside the plugin bundle and survives updates. Secrets are redacted on every distill.
 
