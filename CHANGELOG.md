@@ -6,6 +6,15 @@ Data hub (`$MEMORY_HOME`) is **not** versioned with this file.
 
 ## [Unreleased]
 
+## [0.12.6] - 2026-06-08
+
+### Fixed
+
+- **migrate-memory** — default `--merge`: manifest merged by chat id; template stubs replaced from backup; loud report (copied/skipped/merged); `--overwrite` / deprecated `--ignore-existing`
+- **Restore after reinstall** — safe when `init-memory` ran before migrate (sessionStart race)
+- **memory-doctor** — `--rebuild-manifest`; desync warning when `processed=0` but project distills exist
+- **verify-memory** — manifest desync surfaced as warning
+
 ## [0.12.5] - 2026-06-08
 
 ### Changed

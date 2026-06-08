@@ -7,7 +7,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from lib.timestamps import now_iso
+from lib.timestamps import now_iso, parse_distilled_at
 from lib.transcript_cursor import (  # noqa: I001
     decode_workspace_folder_to_path,
     safe_path_component,
@@ -15,6 +15,9 @@ from lib.transcript_cursor import (  # noqa: I001
 )
 
 _PROJECT_REL_RE = re.compile(r"projects/[A-Za-z0-9._-]+\.md")
+_RECENT_UUID_RE = re.compile(
+    r"\]\(([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\)"
+)
 
 
 def load_manifest(path: Path) -> dict[str, Any]:
@@ -87,6 +90,193 @@ def upsert_processed(
 
     processed.append(entry)
     return True
+
+
+def _entry_recency(entry: dict[str, Any]) -> tuple[Any, str]:
+    """Sort key for choosing the newer manifest entry."""
+    for key in ("distilled_at", "date"):
+        raw = entry.get(key)
+        if raw:
+            parsed = parse_distilled_at(str(raw))
+            if parsed is not None:
+                return (parsed, str(raw))
+            return (str(raw), str(raw))
+    return ("", "")
+
+
+def entry_is_newer(source: dict[str, Any], dest: dict[str, Any]) -> bool:
+    """True if source entry should win over dest for the same chat id."""
+    return _entry_recency(source) >= _entry_recency(dest)
+
+
+def merge_pending_lists(
+    *lists: list[Any],
+) -> list[Any]:
+    """Dedupe pending entries preserving order."""
+    out: list[Any] = []
+    seen: set[str] = set()
+    for items in lists:
+        if not isinstance(items, list):
+            continue
+        for item in items:
+            if isinstance(item, dict):
+                key = str(item.get("id") or json.dumps(item, sort_keys=True))
+            else:
+                key = str(item)
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(item)
+    return out
+
+
+def merge_manifests(
+    source: dict[str, Any],
+    dest: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, int]]:
+    """
+    Merge two manifest dicts by chat id.
+    Returns (merged_manifest, stats).
+    """
+    merged: dict[str, Any] = {}
+    for key in ("_comment", "_schema"):
+        if key in dest:
+            merged[key] = dest[key]
+        elif key in source:
+            merged[key] = source[key]
+
+    merged["processed"] = []
+    merged["pending"] = merge_pending_lists(
+        dest.get("pending") if isinstance(dest.get("pending"), list) else [],
+        source.get("pending") if isinstance(source.get("pending"), list) else [],
+    )
+
+    dest_ids = processed_by_id(dest)
+    source_ids = processed_by_id(source)
+    stats = {
+        "source_processed": len(source_ids),
+        "dest_before": len(dest_ids),
+        "added": 0,
+        "updated": 0,
+        "merged_total": 0,
+    }
+
+    all_ids = set(dest_ids) | set(source_ids)
+    for uid in sorted(all_ids):
+        src_entry = source_ids.get(uid)
+        dst_entry = dest_ids.get(uid)
+        if src_entry and dst_entry:
+            if entry_is_newer(src_entry, dst_entry):
+                upsert_processed(merged, {**dst_entry, **src_entry})
+                stats["updated"] += 1
+            else:
+                upsert_processed(merged, {**src_entry, **dst_entry})
+        elif src_entry:
+            upsert_processed(merged, dict(src_entry))
+            stats["added"] += 1
+        elif dst_entry:
+            upsert_processed(merged, dict(dst_entry))
+
+    stats["merged_total"] = len(processed_by_id(merged))
+    return merged, stats
+
+
+def count_project_distills(memory_home: Path) -> int:
+    """Count non-example project distill files with content beyond a stub."""
+    projects = memory_home / "chats" / "projects"
+    if not projects.is_dir():
+        return 0
+    count = 0
+    for path in projects.glob("*.md"):
+        if path.name == "example.md":
+            continue
+        text = path.read_text(encoding="utf-8", errors="replace")
+        if len(text.strip()) > 80 and "## Recent" in text:
+            count += 1
+    return count
+
+
+def manifest_desync_warning(memory_home: Path) -> str | None:
+    """Return warning text when manifest registry disagrees with on-disk distills."""
+    manifest_path = memory_home / "chats" / "manifest.json"
+    processed, _, _ = count_chats(manifest_path)
+    n_distills = count_project_distills(memory_home)
+    if processed == 0 and n_distills >= 2:
+        return (
+            f"manifest desync: processed=0 but {n_distills} project distills on disk "
+            "(run memory-doctor.py --rebuild-manifest)"
+        )
+    if processed > 0 and n_distills > processed + 5:
+        return (
+            f"manifest may be incomplete: processed={processed}, "
+            f"project distills≈{n_distills}"
+        )
+    return None
+
+
+def rebuild_manifest_from_hub(memory_home: Path) -> tuple[dict[str, Any], dict[str, int]]:
+    """
+    Best-effort rebuild of processed[] from hub artifacts (extracts + project Recent).
+    """
+    manifest_path = memory_home / "chats" / "manifest.json"
+    manifest = load_manifest(manifest_path)
+    stats = {"from_extracts": 0, "from_recent": 0, "skipped": 0}
+
+    extracts_dir = memory_home / "chats" / "extracts"
+    if extracts_dir.is_dir():
+        for path in sorted(extracts_dir.glob("*.json")):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                stats["skipped"] += 1
+                continue
+            if not isinstance(data, dict):
+                stats["skipped"] += 1
+                continue
+            chat_id = str(data.get("uuid") or path.stem)
+            workspace = str(data.get("workspace") or "unknown")
+            slug = str(data.get("workspace_slug") or workspace_slug(workspace))
+            summary = str(data.get("first_query") or data.get("summary") or "")[:140]
+            rel = f"projects/{safe_path_component(slug, fallback='unknown')}.md"
+            entry = make_processed_entry(
+                chat_id=chat_id,
+                workspace=workspace,
+                transcript_date=str(data.get("date") or now_iso()[:10]),
+                summary=summary or chat_id[:8],
+                distilled_to=[rel],
+                workspace_path=data.get("workspace_path"),
+            )
+            upsert_processed(manifest, entry)
+            stats["from_extracts"] += 1
+
+    projects_dir = memory_home / "chats" / "projects"
+    if projects_dir.is_dir():
+        for proj in sorted(projects_dir.glob("*.md")):
+            if proj.name == "example.md":
+                continue
+            slug = proj.stem
+            rel = f"projects/{proj.name}"
+            text = proj.read_text(encoding="utf-8", errors="replace")
+            seen_in_file: set[str] = set()
+            for match in _RECENT_UUID_RE.finditer(text):
+                chat_id = match.group(1)
+                if chat_id in seen_in_file:
+                    continue
+                seen_in_file.add(chat_id)
+                if chat_id in processed_by_id(manifest):
+                    continue
+                entry = make_processed_entry(
+                    chat_id=chat_id,
+                    workspace=f"Users-x-Work-{slug}",
+                    transcript_date=now_iso()[:10],
+                    summary=f"from {rel} Recent",
+                    distilled_to=[rel],
+                )
+                upsert_processed(manifest, entry)
+                stats["from_recent"] += 1
+
+    stats["merged_total"] = len(processed_by_id(manifest))
+    return manifest, stats
 
 
 def make_processed_entry(

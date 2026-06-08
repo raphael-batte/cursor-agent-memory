@@ -49,7 +49,12 @@ Example hub `config.json`:
 
 ## 2. Migrate from an old hub
 
-Copies **missing** files only (`rsync --ignore-existing`).
+Restores a backup into `$MEMORY_HOME`. **Default mode is `--merge`** (order-independent vs `init-memory`):
+
+- **`manifest.json`** — merged by chat id (not skipped)
+- **Template stubs** (`context/*`, `feedback/*`, …) — replaced from backup if dest still matches `templates/`
+- **User-edited files** — kept; warning printed
+- **Project distills** (`chats/projects/`, staging) — copied when missing
 
 ```bash
 bash scripts/migrate-memory.sh \
@@ -57,11 +62,16 @@ bash scripts/migrate-memory.sh \
   --to "$HOME/.cursor/agent-memory"
 ```
 
+Flags: `--overwrite` (source wins everywhere) · `--ignore-existing` (legacy, deprecated) · `--dry-run` · `--json`
+
 Then:
 
 ```bash
 python3 scripts/memory-doctor.py --fix
+python3 scripts/memory-doctor.py --rebuild-manifest   # if registry still desynced
 ```
+
+Safe after reinstall: migrate works even if `sessionStart` already ran `init-memory.sh`.
 
 To keep a custom hub path, set `--to` accordingly; `doctor --fix` updates the anchor.
 

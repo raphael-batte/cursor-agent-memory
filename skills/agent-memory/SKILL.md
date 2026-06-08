@@ -10,7 +10,7 @@ description: >
 
 # Agent Memory
 
-**Version:** 0.12.5 — see [VERSIONING.md](../../VERSIONING.md)
+**Version:** 0.12.6 — see [VERSIONING.md](../../VERSIONING.md)
 
 **Full protocol:** [INSTRUCTIONS.md](../../INSTRUCTIONS.md) · **Overview:** [ARCHITECTURE.md](../../ARCHITECTURE.md)
 
@@ -45,7 +45,7 @@ Ask the user (one message, numbered options):
 |--------|-----|
 | Keep default | `bash "$PLUGIN_ROOT/scripts/init-memory.sh"` |
 | Custom | `MEMORY_HOME=<path> bash "$PLUGIN_ROOT/scripts/init-memory.sh"` |
-| Migrate | `bash "$PLUGIN_ROOT/scripts/migrate-memory.sh" --from <old> --to <target>` then `python3 "$PLUGIN_ROOT/scripts/memory-doctor.py" --fix` |
+| Migrate | `bash "$PLUGIN_ROOT/scripts/migrate-memory.sh" --from <old> --to <target>` (default: **merge** manifest + replace template stubs) then `python3 "$PLUGIN_ROOT/scripts/memory-doctor.py" --fix` |
 
 Resolve `$MEMORY_HOME` from anchor after any change. Confirm path with user before distill.
 

@@ -11,6 +11,11 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
+from lib.chats_manifest import (  # noqa: E402
+    manifest_desync_warning,
+    rebuild_manifest_from_hub,
+    save_manifest,
+)
 from lib.doctor_fix import run_fix  # noqa: E402
 from lib.memory_config import (  # noqa: E402
     ANCHOR_FILE,
@@ -55,6 +60,10 @@ def run_doctor(
     )
     passed, failed = vm.summarize_results(results)
     skills = ms.skills_stats(memory_home, framework_root)
+    desync = manifest_desync_warning(memory_home)
+    extra_warnings = list(warnings)
+    if desync:
+        extra_warnings.append(desync)
 
     return {
         "memory_home": str(memory_home),
@@ -70,7 +79,8 @@ def run_doctor(
         "verify_details": [
             {"name": r.name, "ok": r.ok, "detail": r.detail} for r in results
         ],
-        "warnings": warnings,
+        "warnings": extra_warnings,
+        "manifest_desync": desync,
         "skills": {
             "framework_linked": skills["framework_linked"],
             "personal_linked": skills["personal_linked"],
@@ -95,10 +105,38 @@ def main() -> int:
         help="Align memory/config.json and relink Cursor skills",
     )
     parser.add_argument("--fix-dry-run", action="store_true")
+    parser.add_argument(
+        "--rebuild-manifest",
+        action="store_true",
+        help="Rebuild chats/manifest.json from extracts + project Recent links",
+    )
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
 
     memory_home = resolve_memory_home(args.memory_home, script_file=__file__)
+
+    if args.rebuild_manifest:
+        manifest, stats = rebuild_manifest_from_hub(memory_home)
+        manifest_path = memory_home / "chats" / "manifest.json"
+        save_manifest(manifest_path, manifest)
+        payload = {
+            "status": "ok",
+            "memory_home": str(memory_home),
+            "manifest_path": str(manifest_path),
+            "stats": stats,
+        }
+        if args.json:
+            print(json.dumps(payload, indent=2))
+        else:
+            print("Memory Doctor — rebuild-manifest")
+            print(f"  Hub:      {memory_home}")
+            print(
+                f"  Entries:  {stats.get('merged_total', 0)} "
+                f"(extracts={stats.get('from_extracts', 0)}, "
+                f"recent={stats.get('from_recent', 0)})"
+            )
+        return 0
+
     framework_root = resolve_plugin_root(
         args.framework_root,
         script_file=__file__,
@@ -148,7 +186,8 @@ def main() -> int:
         print(f"  ⚠ {w}")
     print()
     print(report["path_resolution"])
-    print("  Tip: memory-doctor.py --fix  align configs + relink skills")
+    print("  Tip: memory-doctor.py --fix  align configs")
+    print("  Tip: memory-doctor.py --rebuild-manifest  fix registry desync")
     return 0 if report["verify"]["ok"] else 1
 
 

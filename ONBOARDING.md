@@ -21,10 +21,11 @@ bash scripts/install-local.sh
 | Reload Cursor | Plugin discovers skills + hooks from bundle |
 | `init-memory.sh` | Creates hub + anchor (idempotent; never overwrites user data) |
 
-Default hub: `~/.cursor/agent-memory/` (first `sessionStart` may prompt to relocate via agent).
+Default hub: `~/.cursor/agent-memory/` (first `sessionStart` may create template stubs; **restore** via `migrate-memory.sh --from backup`).
 
 ```bash
 bash scripts/init-memory.sh   # optional — hooks also init idempotently
+bash scripts/migrate-memory.sh --from /path/to/backup   # reinstall restore (merge mode)
 ```
 
 ### First run (hook + chat wizard)

@@ -94,4 +94,22 @@ MEMORY_HOME="$INIT_HUB" bash "$ROOT/scripts/init-memory.sh" >/dev/null
 test -f "$INIT_HUB/config.json"
 test -f "$INIT_HUB/chats/manifest.json"
 
+# init then migrate — manifest merge after template init (regression)
+RACE_OLD="$TMP/race-old"
+RACE_NEW="$TMP/race-new"
+mkdir -p "$RACE_OLD/chats/projects" "$RACE_OLD/context" "$RACE_OLD/feedback"
+echo '{"processed":[{"id":"x1","distilled_at":"2026-06-08","summary":"s"}],"pending":[]}' \
+  > "$RACE_OLD/chats/manifest.json"
+echo "# Restored context with enough lines for verify" > "$RACE_OLD/context/GLOBAL_CONTEXT.md"
+echo "## Me" >> "$RACE_OLD/context/GLOBAL_CONTEXT.md"
+echo "- user" >> "$RACE_OLD/context/GLOBAL_CONTEXT.md"
+MEMORY_HOME="$RACE_NEW" bash "$ROOT/scripts/init-memory.sh" >/dev/null
+bash "$ROOT/scripts/migrate-memory.sh" --from "$RACE_OLD" --to "$RACE_NEW"
+python3 -c "
+import json
+from pathlib import Path
+m = json.loads(Path('$RACE_NEW/chats/manifest.json').read_text())
+assert len(m.get('processed', [])) == 1, m
+"
+
 echo "shell tests: OK"

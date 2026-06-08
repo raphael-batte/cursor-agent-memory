@@ -20,6 +20,7 @@ from lib.gitleaks_scan import (  # noqa: E402
     scan_path_with_gitleaks,
 )
 from lib.cross_layer_warnings import collect_cross_layer_warnings  # noqa: E402
+from lib.chats_manifest import manifest_desync_warning  # noqa: E402
 from lib.secrets_guard import scan_memory_hub  # noqa: E402
 from lib.timestamps import parse_distilled_at  # noqa: E402
 
@@ -288,6 +289,9 @@ def run_checks_for_hub(
     if gitleaks or gitleaks_required:
         results.append(check_gitleaks(memory_home, required=gitleaks_required))
     warnings = collect_cross_layer_warnings(memory_home)
+    desync = manifest_desync_warning(memory_home)
+    if desync:
+        warnings.append(desync)
     _ = args_ns  # reserved for future threshold overrides from hub config
     return results, warnings
 
