@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import os
 import sys
 import tempfile
-import time
 import unittest
 from datetime import datetime
 from pathlib import Path
@@ -32,12 +32,10 @@ class TestTimestamps(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             jsonl = Path(tmp) / "chat.jsonl"
             jsonl.write_text("{}\n", encoding="utf-8")
-            morning = datetime.fromtimestamp(jsonl.stat().st_mtime).replace(
-                hour=9, minute=0, second=0
-            )
-            distilled = morning.strftime("%Y-%m-%dT%H:%M:%S")
-            time.sleep(0.05)
-            jsonl.write_text("{}\n{}\n", encoding="utf-8")
+            base = 1_700_000_000.0
+            os.utime(jsonl, (base, base))
+            distilled = datetime.fromtimestamp(base).strftime("%Y-%m-%dT%H:%M:%S")
+            os.utime(jsonl, (base + 10, base + 10))
             self.assertTrue(ts.transcript_is_newer_than_distill(jsonl, distilled))
 
     def test_legacy_date_same_day_afternoon(self) -> None:
