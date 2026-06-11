@@ -100,8 +100,10 @@ def extract_raw_user_texts(jsonl: Path) -> tuple[list[str], ParseStats]:
 
 def workspace_from_path(jsonl: Path, projects_root: Path) -> str:
     try:
-        rel = jsonl.relative_to(projects_root)
+        rel = jsonl.resolve().relative_to(projects_root.resolve())
         if len(rel.parts) >= 4:
+            return rel.parts[0]
+        if len(rel.parts) >= 2 and rel.parts[1] == "agent-transcripts":
             return rel.parts[0]
     except ValueError:
         pass

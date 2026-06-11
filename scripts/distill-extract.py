@@ -245,6 +245,7 @@ def build_extract(
             pause_minutes=int(thresholds["segment_pause_minutes"]),
             jaccard_window=int(thresholds["segment_jaccard_window"]),
             jaccard_min=float(thresholds["segment_jaccard_min"]),
+            memory_home=memory_home,
         )
         if total >= 20
         else []

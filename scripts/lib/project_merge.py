@@ -16,12 +16,11 @@ from lib.message_importance import mechanical_bullets
 from lib.secrets_guard import scan_file
 from lib.pointer_metrics import maybe_log_pointer_clobbered
 from lib.pointer_provenance import (
-    LIVE_POINTER_SOURCES,
     PROVENANCE_AUTO,
     PROVENANCE_CURATED,
-    PROVENANCE_LIVE,
     find_curated_next_step,
     format_curated_next_step,
+    is_strong_pointer_source,
     pointer_provenance_class,
     watermark_changed,
 )
@@ -279,7 +278,7 @@ def apply_extract_to_project(
     pointer_provenance = PROVENANCE_AUTO
 
     if curated_text:
-        strong = pointer_result.source in LIVE_POINTER_SOURCES
+        strong = is_strong_pointer_source(pointer_result.source)
         wm_changed = watermark_changed(extract, manifest_entry)
         if strong and wm_changed and pointer_candidate:
             next_body, next_kind = format_next_step_line(
@@ -306,7 +305,7 @@ def apply_extract_to_project(
         new_chat_id=str(extract.get("uuid") or ""),
         existing_recent=existing_recent,
         prev_next_step=prev_next_step,
-        next_kind=next_kind if next_kind != "curated_preserved" else "extracted",
+        next_kind=next_kind,
     )
     sections["Next step"] = next_body
     next_step_updated = next_kind != "curated_preserved"

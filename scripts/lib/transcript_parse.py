@@ -77,13 +77,13 @@ class ParsedTranscript:
         ]
 
     def last_assistant_summary(self, *, max_len: int = 600) -> str | None:
-        """Last assistant text block — prefer final paragraph."""
+        """Last assistant text block — prefer longest paragraph (substance over sign-off)."""
         for block in reversed(self.assistant_blocks):
             text = block.text.strip()
             if not text:
                 continue
             paras = [p.strip() for p in text.split("\n\n") if p.strip()]
-            summary = paras[-1] if paras else text
+            summary = max(paras, key=len) if paras else text
             summary = re.sub(r"\s+", " ", summary).strip()
             clean, _n = sanitize_message(summary)
             if not clean:

@@ -56,7 +56,12 @@ class TestMemoryHealth(unittest.TestCase):
             hub = Path(tmp)
             append_metric(
                 hub,
-                {"event": "pointer_feedback", "outcome": "hit", "workspace_slug": "app"},
+                {
+                    "event": "pointer_feedback",
+                    "outcome": "unmeasured",
+                    "disk_hit": True,
+                    "workspace_slug": "app",
+                },
             )
             append_metric(
                 hub,
@@ -64,7 +69,7 @@ class TestMemoryHealth(unittest.TestCase):
             )
             mh = _load_memory_health()
             data = mh.analyze_metrics(read_metrics(hub), days=7)
-            self.assertEqual(data["pointer_feedback_hits"], 1)
+            self.assertEqual(data["pointer_feedback_disk_hits"], 1)
             self.assertEqual(data["pointer_feedback_miss"], 1)
             self.assertEqual(data["pointer_session_hit_rate"], 0.5)
 

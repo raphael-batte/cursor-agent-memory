@@ -429,7 +429,10 @@ def handle_session_start(
 
     try:
         result["pointer_feedback"] = log_session_start_pointer_feedback(
-            memory_home, slugs
+            memory_home,
+            slugs,
+            payload=payload,
+            projects_root=projects_root,
         )
     except OSError:
         result["pointer_feedback"] = []
@@ -508,11 +511,13 @@ def handle_boundary(
             )
 
     if event == "preCompact":
-        msg = "[agent-memory] Context compacting — review merge-staging and latest distills."
-        if distill.get("status") == "distilled":
-            staging = distill.get("staging_path", "")
-            msg += f" Staging: {staging}"
-        result["user_message"] = msg
+        from lib.agent_live_distill import build_precompact_user_message
+
+        result["user_message"] = build_precompact_user_message(
+            memory_home,
+            distill,
+            framework_root=SCRIPT_DIR.parent,
+        )
     elif event == "sessionEnd":
         msg = _session_end_user_message(distill)
         if msg:

@@ -13,6 +13,10 @@ from lib.lang_cues import (
     load_lang_cues,
 )
 from lib.secrets_guard import is_terminal_noise, sanitize_message
+from lib.agent_live_distill_constants import (
+    AGENT_LIVE_CONFIDENCE,
+    AGENT_LIVE_POINTER_SOURCE,
+)
 from lib.structured_signals import (
     TODO_POINTER_CONFIDENCE,
     TODO_POINTER_SOURCE,
@@ -29,6 +33,7 @@ NO_POINTER_MARKER = "_No forward pointer._"
 STALE_POINTER_PREFIX = "[?]"
 
 _SOURCE_CONFIDENCE: dict[str, float] = {
+    AGENT_LIVE_POINTER_SOURCE: AGENT_LIVE_CONFIDENCE,
     "user_commitment": 0.95,
     "todo_state": TODO_POINTER_CONFIDENCE,
     "user_pattern": 0.85,
@@ -148,6 +153,17 @@ def extract_forward_pointer_result(
     → extract user fallback → assistant action-hint (lowest).
     """
     hub = _resolve_memory_home(extract, memory_home)
+    agent_live = extract.get("agent_live") or {}
+    live_next = agent_live.get("next_step")
+    if isinstance(live_next, str) and live_next.strip():
+        cand = _clean_candidate(live_next.strip())
+        if cand:
+            return PointerResult(
+                cand,
+                _SOURCE_CONFIDENCE[AGENT_LIVE_POINTER_SOURCE],
+                AGENT_LIVE_POINTER_SOURCE,
+            )
+
     source = extract.get("source_path")
     jsonl = Path(str(source)).expanduser() if source else None
 

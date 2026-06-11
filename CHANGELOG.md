@@ -6,7 +6,24 @@ Data hub (`$MEMORY_HOME`) is **not** versioned with this file.
 
 ## [Unreleased]
 
-## [0.17.0] - 2026-06-08
+## [0.18.0] - 2026-06-08
+
+### Added
+
+- **Real pointer adherence (1.4)** — `pointer_feedback` compares `## Next step` tokens with session-tail user messages + open TodoWrite → `followed` / `partial` / `ignored` / `resumed_blind` / `unmeasured`
+- **Agent live distill (2.2)** — `templates/chats/live-distill-prompt.md`; preCompact `user_message` targets `merge-staging/*-live.md`; merge reads agent live summary + next-step candidate
+- **`lib/agent_live_distill.py`** — find/parse/enrich `*-live.md`; `agent_live` pointer source (0.92 confidence)
+
+### Changed
+
+- **Provenance rename** — `live` → `strong_signal` (user_commitment / todo_state); new `agent_live` class; legacy manifest `live` normalized on read
+- **`last_assistant_summary`** — longest paragraph instead of last (less sign-off fluff)
+- **`topic_segmentation`** — lazy `new_task` pattern with hub `config.lang` override
+- **`ru.json`** — drop bare single-word RU commitment prefixes (false positives at 0.95)
+- **`memory-health`** — `pointer_adherence_rate` + breakdown; disk hit rate uses `disk_hit`
+- **Clobber metric** — no false `pointer_clobbered_cross_chat` when curated Next step preserved
+
+## [0.17.0] - 2026-06-11
 
 ### Added
 
@@ -20,7 +37,7 @@ Data hub (`$MEMORY_HOME`) is **not** versioned with this file.
 - **2.7 Strategies** — `auto`/`importance` use ranked sampling; `tail`/`spread` are positional only
 - **Token estimate** — Cyrillic-weighted `estimate_tokens()` for budget sampling
 
-## [0.16.0] - 2026-06-08
+## [0.16.0] - 2026-06-10
 
 ### Added
 
@@ -36,7 +53,7 @@ Data hub (`$MEMORY_HOME`) is **not** versioned with this file.
 - **`distill-merge` staging** — novelty filter on raw messages and rolling summary
 - **`handle_session_start`** — live distill for active transcript + pointer feedback logging
 
-## [0.15.0] - 2026-06-08
+## [0.15.0] - 2026-06-09
 
 ### Added
 

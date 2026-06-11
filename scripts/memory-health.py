@@ -83,12 +83,36 @@ def analyze_metrics(
     budget_exceeded = sum(1 for r in distilled if r.get("token_budget_exceeded"))
 
     feedback = [r for r in recent if r.get("event") == "pointer_feedback"]
-    feedback_hits = sum(1 for r in feedback if r.get("outcome") == "hit")
     feedback_miss = sum(1 for r in feedback if r.get("outcome") == "miss")
     feedback_skip = sum(1 for r in feedback if r.get("outcome") == "skip")
-    feedback_total = feedback_hits + feedback_miss
+    feedback_unmeasured = sum(1 for r in feedback if r.get("outcome") == "unmeasured")
+    feedback_disk_hits = sum(
+        1 for r in feedback if r.get("disk_hit") or r.get("outcome") == "hit"
+    )
+    adherence_outcomes = frozenset(
+        {"followed", "partial", "ignored", "resumed_blind"}
+    )
+    adherence_rows = [
+        r for r in feedback if r.get("session_outcome") in adherence_outcomes
+    ]
+    feedback_followed = sum(
+        1 for r in adherence_rows if r.get("session_outcome") == "followed"
+    )
+    feedback_partial = sum(
+        1 for r in adherence_rows if r.get("session_outcome") == "partial"
+    )
+    feedback_ignored = sum(
+        1 for r in adherence_rows if r.get("session_outcome") == "ignored"
+    )
+    feedback_resumed_blind = sum(
+        1 for r in adherence_rows if r.get("session_outcome") == "resumed_blind"
+    )
+    feedback_disk_total = feedback_disk_hits + feedback_miss
     session_pointer_hit_rate = (
-        feedback_hits / feedback_total if feedback_total else None
+        feedback_disk_hits / feedback_disk_total if feedback_disk_total else None
+    )
+    pointer_adherence_rate = (
+        feedback_followed / len(adherence_rows) if adherence_rows else None
     )
 
     truncation_rate = truncated / len(distilled) if distilled else None
@@ -142,7 +166,13 @@ def analyze_metrics(
         "token_budget_exceeded": budget_exceeded,
         "pointer_feedback_events": len(feedback),
         "pointer_session_hit_rate": session_pointer_hit_rate,
-        "pointer_feedback_hits": feedback_hits,
+        "pointer_adherence_rate": pointer_adherence_rate,
+        "pointer_feedback_disk_hits": feedback_disk_hits,
+        "pointer_feedback_followed": feedback_followed,
+        "pointer_feedback_partial": feedback_partial,
+        "pointer_feedback_ignored": feedback_ignored,
+        "pointer_feedback_resumed_blind": feedback_resumed_blind,
+        "pointer_feedback_unmeasured": feedback_unmeasured,
         "pointer_feedback_miss": feedback_miss,
         "pointer_feedback_skip": feedback_skip,
         "crashes": len(crashes),
@@ -207,8 +237,15 @@ def print_report(data: dict) -> None:
     if session_rate is not None:
         print(
             f"  Session hit:    {session_rate * 100:.0f}% "
-            f"({data.get('pointer_feedback_hits', 0)} hit / "
+            f"({data.get('pointer_feedback_disk_hits', 0)} disk / "
             f"{data.get('pointer_feedback_miss', 0)} miss)"
+        )
+    adherence = data.get("pointer_adherence_rate")
+    if adherence is not None:
+        print(
+            f"  Adherence:      {adherence * 100:.0f}% followed "
+            f"({data.get('pointer_feedback_followed', 0)} / "
+            f"{data.get('pointer_feedback_followed', 0) + data.get('pointer_feedback_partial', 0) + data.get('pointer_feedback_ignored', 0) + data.get('pointer_feedback_resumed_blind', 0)})"
         )
     bl = data.get("baseline") or {}
     if bl.get("median_hit_rate") is not None:

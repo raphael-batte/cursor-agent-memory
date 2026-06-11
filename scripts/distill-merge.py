@@ -27,6 +27,7 @@ from lib.apply_guard import check_cli_apply_guard  # noqa: E402
 from lib.defaults import APPLY_REVIEW_MAX_DAYS  # noqa: E402
 from lib.distill_links import enrich_extract, recent_bullet  # noqa: E402
 from lib.memory_config import resolve_memory_home  # noqa: E402
+from lib.agent_live_distill import enrich_extract_with_agent_live  # noqa: E402
 from lib.novelty import collect_prior_texts, filter_novel_items  # noqa: E402
 from lib.project_merge import apply_extract_to_project  # noqa: E402
 from lib.timestamps import now_iso, staging_date_slug  # noqa: E402
@@ -68,6 +69,21 @@ def build_staging_markdown(
         ],
         "",
     ]
+    agent_live = extract.get("agent_live") or {}
+    if agent_live.get("summary_bullets"):
+        lines.extend(["", "## Agent live summary (preCompact)", ""])
+        for bullet in agent_live["summary_bullets"][:5]:
+            lines.append(f"- {bullet}")
+    if agent_live.get("next_step"):
+        lines.extend(
+            [
+                "",
+                "## Agent live next step candidate",
+                "",
+                f"- {agent_live['next_step']}",
+            ]
+        )
+
     initial = extract.get("first_query")
     if initial and extract.get("final_summary"):
         lines.extend(
@@ -179,6 +195,9 @@ def run_merge(
         extract,
         memory_home=memory_home,
         projects_root=projects_root,
+    )
+    extract = enrich_extract_with_agent_live(
+        extract, memory_home=memory_home, chat_id=chat_id
     )
 
     slug = safe_path_component(

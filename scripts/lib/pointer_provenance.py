@@ -6,18 +6,38 @@ import re
 from typing import Any
 
 CURATED_POINTER_PREFIX = "[curated]"
-LIVE_POINTER_SOURCES = frozenset({"user_commitment", "todo_state"})
+STRONG_POINTER_SOURCES = frozenset({"user_commitment", "todo_state"})
+AGENT_LIVE_POINTER_SOURCE = "agent_live"
 PROVENANCE_CURATED = "curated"
-PROVENANCE_LIVE = "live"
+PROVENANCE_STRONG_SIGNAL = "strong_signal"
+PROVENANCE_AGENT_LIVE = "agent_live"
 PROVENANCE_AUTO = "auto"
+# Backward-compatible alias (v0.15–0.17 manifest values)
+PROVENANCE_LIVE = PROVENANCE_STRONG_SIGNAL
 
 _CURATED_RE = re.compile(r"^\[curated\]\s*", re.I)
+_LEGACY_LIVE = frozenset({"live"})
+
+
+def normalize_provenance(value: str | None) -> str:
+    """Map legacy manifest `live` → `strong_signal`."""
+    if not value:
+        return PROVENANCE_AUTO
+    if value in _LEGACY_LIVE:
+        return PROVENANCE_STRONG_SIGNAL
+    return value
 
 
 def pointer_provenance_class(source: str) -> str:
-    if source in LIVE_POINTER_SOURCES:
-        return PROVENANCE_LIVE
+    if source == AGENT_LIVE_POINTER_SOURCE:
+        return PROVENANCE_AGENT_LIVE
+    if source in STRONG_POINTER_SOURCES:
+        return PROVENANCE_STRONG_SIGNAL
     return PROVENANCE_AUTO
+
+
+def is_strong_pointer_source(source: str) -> bool:
+    return source in STRONG_POINTER_SOURCES or source == AGENT_LIVE_POINTER_SOURCE
 
 
 def strip_curated_marker(bullet: str) -> str:

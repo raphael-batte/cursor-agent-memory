@@ -6,11 +6,26 @@ import re
 from datetime import datetime, timedelta
 
 from lib.defaults import DOMAIN_STOPWORDS
+from pathlib import Path
+
 from lib.lang_cues import build_new_task_pattern, load_lang_cues
 from lib.timestamps import parse_distilled_at
 
-_NEW_TASK = build_new_task_pattern(load_lang_cues())
+_NEW_TASK_CACHE: dict[str, re.Pattern[str]] = {}
 _TOKEN_RE = re.compile(r"[\w\u0400-\u04ff]+", re.UNICODE)
+
+
+def clear_new_task_cache() -> None:
+    _NEW_TASK_CACHE.clear()
+
+
+def _new_task_pattern(memory_home: Path | None = None) -> re.Pattern[str]:
+    key = str(memory_home or "")
+    if key not in _NEW_TASK_CACHE:
+        _NEW_TASK_CACHE[key] = build_new_task_pattern(
+            load_lang_cues(memory_home=memory_home)
+        )
+    return _NEW_TASK_CACHE[key]
 
 
 def _parse_ts(value: str | None) -> datetime | None:
@@ -49,10 +64,12 @@ def _collect_breaks(
     pause_minutes: int,
     jaccard_window: int,
     jaccard_min: float,
+    memory_home: Path | None = None,
 ) -> list[int]:
+    new_task = _new_task_pattern(memory_home)
     breaks = {0}
     for i in range(1, len(messages)):
-        if _NEW_TASK.search(messages[i]):
+        if new_task.search(messages[i]):
             breaks.add(i)
             continue
         if timestamps and i < len(timestamps):
@@ -87,6 +104,7 @@ def segment_messages(
     pause_minutes: int = 30,
     jaccard_window: int = 5,
     jaccard_min: float = 0.15,
+    memory_home: Path | None = None,
 ) -> list[dict]:
     """
     Split user messages into topic segments.
@@ -100,6 +118,7 @@ def segment_messages(
         pause_minutes=pause_minutes,
         jaccard_window=jaccard_window,
         jaccard_min=jaccard_min,
+        memory_home=memory_home,
     )
     if breaks == [0]:
         breaks = [0, len(messages)]
