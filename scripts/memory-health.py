@@ -22,6 +22,7 @@ from lib.health_baseline import (  # noqa: E402
     load_baseline,
     record_snapshot,
 )
+from lib.hub_health import analyze_hub_disk  # noqa: E402
 from lib.memory_config import resolve_memory_home  # noqa: E402
 
 
@@ -233,6 +234,24 @@ def print_report(data: dict) -> None:
     print(f"  Live distills:  {data.get('live_distills', 0)}")
     if data.get("token_budget_exceeded"):
         print(f"  Budget exceed:  {data['token_budget_exceeded']}")
+    hub = data.get("hub_disk") or {}
+    disk_rate = hub.get("pointer_extracted_rate")
+    if disk_rate is not None:
+        print(
+            f"  Disk pointers:  {disk_rate * 100:.0f}% real "
+            f"({hub.get('pointer_placeholder', 0)} placeholder)"
+        )
+    if hub.get("queue_size"):
+        print(
+            f"  Curation queue: {hub['queue_size']} "
+            f"(median {hub.get('queue_median_age_hours', '?')}h)"
+        )
+    orphan_rate = hub.get("staging_orphan_rate")
+    if orphan_rate is not None and hub.get("staging_files", 0) > 0:
+        print(
+            f"  Staging orphan: {orphan_rate * 100:.0f}% "
+            f"({hub.get('staging_orphans', 0)}/{hub.get('staging_files', 0)})"
+        )
     mark = "✓" if data.get("healthy") else "⚠"
     print(f"  {mark} {'healthy' if data.get('healthy') else 'review metrics'}")
 
@@ -251,6 +270,7 @@ def main() -> int:
     rows = read_metrics(memory_home)
     data = analyze_metrics(rows, days=args.days)
     data = enrich_with_baseline(memory_home, data, update_baseline=args.update_baseline)
+    data["hub_disk"] = analyze_hub_disk(memory_home)
     data["memory_home"] = str(memory_home)
 
     if args.json:

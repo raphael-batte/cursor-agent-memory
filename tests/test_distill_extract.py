@@ -109,9 +109,9 @@ class TestDistillExtractHelpers(unittest.TestCase):
             nums = [int(m.split()[1]) for m in msgs]
             self.assertTrue(any(15 <= n <= 45 for n in nums), nums)
 
-    def test_auto_strategy_picks_spread_over_50(self) -> None:
-        self.assertEqual(de.resolve_strategy("auto", 51), "spread")
-        self.assertEqual(de.resolve_strategy("auto", 50), "tail")
+    def test_auto_strategy_uses_importance(self) -> None:
+        self.assertEqual(de.resolve_strategy("auto", 51), "importance")
+        self.assertEqual(de.resolve_strategy("auto", 50), "importance")
 
     def test_keywords_hit(self) -> None:
         msgs, _, _, _, _ = de.extract_user_messages(FIXTURE, strategy="all")

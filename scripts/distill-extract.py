@@ -39,7 +39,7 @@ from lib.transcript_cursor import is_redacted_or_noise, normalize_user_text  # n
 DEFAULT_PROJECTS_ROOT = Path.home() / ".cursor/projects"
 
 KEYWORDS = DEFAULT_KEYWORDS
-STRATEGIES = ("tail", "spread", "all", "auto")
+STRATEGIES = ("importance", "tail", "spread", "all", "auto")
 
 
 def resolve_strategy(
@@ -49,7 +49,9 @@ def resolve_strategy(
     auto_spread_threshold: int = AUTO_SPREAD_THRESHOLD,
 ) -> str:
     if strategy == "auto":
-        return "spread" if total > auto_spread_threshold else "tail"
+        return "importance"
+    if strategy == "importance":
+        return "importance"
     return strategy
 
 
@@ -89,7 +91,7 @@ def select_messages(
     *,
     token_budget: int = DISTILL_TOKEN_BUDGET,
 ) -> list[str]:
-    if strategy in ("spread", "tail", "auto"):
+    if strategy in ("importance", "auto"):
         picked = select_by_importance(
             messages,
             max_messages=max_messages,
@@ -97,6 +99,7 @@ def select_messages(
         )
         if picked:
             return picked
+        return select_tail(messages, max_messages)
     if strategy == "spread":
         return select_spread(messages, max_messages)
     return select_tail(messages, max_messages)
@@ -192,15 +195,17 @@ def build_extract(
 
     parsed = parse_transcript(jsonl)
     all_msgs: list[str] = []
+    all_timestamps: list[str | None] = []
     secrets_redacted = 0
-    for text in parsed.user_texts():
-        clean, n = sanitize_message(text)
+    for msg in parsed.user_messages:
+        clean, n = sanitize_message(msg.text)
         secrets_redacted += n
         if clean is None:
             continue
         if is_terminal_noise(clean):
             continue
         all_msgs.append(clean)
+        all_timestamps.append(msg.timestamp)
     if not all_msgs:
         raise TranscriptSchemaError(
             f"no usable user messages after sanitization: {jsonl}"
@@ -233,7 +238,17 @@ def build_extract(
         if total >= map_reduce_threshold
         else []
     )
-    topic_segments = segment_messages(all_msgs) if total >= 20 else []
+    topic_segments = (
+        segment_messages(
+            all_msgs,
+            timestamps=all_timestamps,
+            pause_minutes=int(thresholds["segment_pause_minutes"]),
+            jaccard_window=int(thresholds["segment_jaccard_window"]),
+            jaccard_min=float(thresholds["segment_jaccard_min"]),
+        )
+        if total >= 20
+        else []
+    )
     tokens_estimated = sum(estimate_tokens(m) for m in messages)
     open_todo_items = parsed.open_todos()
     from lib.transcript_stats import transcript_watermark  # noqa: E402
@@ -300,7 +315,8 @@ def main() -> int:
     parser.add_argument(
         "--strategy",
         choices=STRATEGIES,
-        default="tail",
+        default="auto",
+        help="auto/importance=ranked sample; tail/spread=positional; all=full chat",
     )
     parser.add_argument("--all", action="store_true", help="Alias for --strategy all")
     parser.add_argument("--projects-root", metavar="DIR")

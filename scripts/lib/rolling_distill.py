@@ -6,8 +6,33 @@ import json
 from pathlib import Path
 from typing import Any
 
+from lib.defaults import (
+    ROLLING_COMPACTION_ENQUEUE,
+    ROLLING_COMPACTION_HARD_CAP,
+    ROLLING_SUMMARY_MAX,
+)
 from lib.message_importance import mechanical_bullets
 from lib.transcript_cursor import safe_path_component
+
+
+def mechanical_compact_segments(segments: list[dict]) -> tuple[list[dict], list[str]]:
+    """Dedup bullets across rolling segments; trim to summary cap."""
+    bullets: list[str] = []
+    seen: set[str] = set()
+    for seg in segments:
+        if not isinstance(seg, dict):
+            continue
+        for raw in seg.get("bullets") or []:
+            key = str(raw)[:80].lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            bullets.append(str(raw))
+    trimmed = bullets[-ROLLING_SUMMARY_MAX:]
+    compact_segments = (
+        [{"from": 0, "to": 0, "bullets": trimmed, "compacted": True}] if trimmed else []
+    )
+    return compact_segments, trimmed
 
 
 def rolling_path(memory_home: Path, chat_id: str) -> Path:
@@ -86,7 +111,10 @@ def update_rolling_after_merge(
     total_user_count: int,
     incremental_bullets: list[str] | None,
     incremental_from: int,
-) -> None:
+    workspace_slug: str | None = None,
+    enqueue_threshold: int = ROLLING_COMPACTION_ENQUEUE,
+    hard_cap: int = ROLLING_COMPACTION_HARD_CAP,
+) -> dict:
     rolling = load_rolling(memory_home, chat_id) or {
         "chat_id": chat_id,
         "last_user_count": 0,
@@ -101,6 +129,25 @@ def update_rolling_after_merge(
                 "bullets": incremental_bullets,
             }
         )
+    compacted = False
+    if len(segments) >= hard_cap:
+        segments, summary = mechanical_compact_segments(segments)
+        rolling["rolling_summary"] = summary
+        compacted = True
     rolling["last_user_count"] = total_user_count
-    rolling["segments"] = segments[-20:]
+    rolling["segments"] = segments[-hard_cap:]
     save_rolling(memory_home, chat_id, rolling)
+
+    queued = False
+    if len(segments) >= enqueue_threshold:
+        from lib.pointer_curation_queue import enqueue_compaction  # noqa: E402
+
+        enqueue_compaction(
+            memory_home,
+            chat_id=chat_id,
+            workspace_slug=workspace_slug,
+            segment_count=len(segments),
+            reason="rolling_segments" if not compacted else "rolling_hard_cap",
+        )
+        queued = True
+    return {"segment_count": len(segments), "compaction_queued": queued, "compacted": compacted}

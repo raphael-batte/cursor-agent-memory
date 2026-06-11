@@ -6,6 +6,20 @@ Data hub (`$MEMORY_HOME`) is **not** versioned with this file.
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-06-08
+
+### Added
+
+- **Topic segmentation 2.4** — pause gaps + Jaccard lexical shift (thresholds via hub `config.json`)
+- **Rolling compaction 2.6** — queue at 15 segments, mechanical dedup at 25; `kind: compaction` in curation queue
+- **`hub_retention.py`** — `memory-doctor --fix` deletes stale `merge-staging/` + `extracts/` for processed chats (default 30d)
+- **`hub_health.py`** — disk pointer rate, curation queue age, staging orphan rate in `memory-health.py`
+
+### Changed
+
+- **2.7 Strategies** — `auto`/`importance` use ranked sampling; `tail`/`spread` are positional only
+- **Token estimate** — Cyrillic-weighted `estimate_tokens()` for budget sampling
+
 ## [0.16.0] - 2026-06-08
 
 ### Added

@@ -27,6 +27,11 @@ class TestTokenBudget(unittest.TestCase):
         thresholds = load_thresholds({"thresholds": {"distill_token_budget": 8000}})
         self.assertEqual(thresholds["distill_token_budget"], 8000)
 
+    def test_cyrillic_token_weight(self) -> None:
+        en = tb.estimate_tokens("deploy docker production")
+        ru = tb.estimate_tokens("\u0434\u0435\u043f\u043b\u043e\u0439 \u043d\u0430 \u043f\u0440\u043e\u0434 \u0441\u0435\u0440\u0432\u0435\u0440")
+        self.assertGreaterEqual(ru, en)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,7 +1,7 @@
 {
   "name": "agent-memory",
   "displayName": "Agent Memory",
-  "version": "0.16.0",
+  "version": "0.17.0",
   "description": "Remembers what matters between Cursor sessions: preferences, project context, and where you left off, in private files that survive plugin updates. Memory updates automatically; secrets are never stored.",
   "author": {
     "name": "raphaelbatte"

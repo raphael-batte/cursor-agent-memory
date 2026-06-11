@@ -314,6 +314,7 @@ def run_merge(
             total_user_count=int(extract.get("user_message_count") or 0),
             incremental_bullets=inc.get("incremental_bullets"),
             incremental_from=int(inc.get("incremental_from") or 0),
+            workspace_slug=str(extract.get("workspace_slug") or slug),
         )
 
     return result

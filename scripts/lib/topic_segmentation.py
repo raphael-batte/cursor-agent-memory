@@ -1,27 +1,110 @@
-"""Topic segments in long chats — split on new-task cues."""
+"""Topic segments in long chats — cues, pause gaps, lexical shift."""
 
 from __future__ import annotations
 
+import re
+from datetime import datetime, timedelta
+
+from lib.defaults import DOMAIN_STOPWORDS
 from lib.lang_cues import build_new_task_pattern, load_lang_cues
+from lib.timestamps import parse_distilled_at
 
 _NEW_TASK = build_new_task_pattern(load_lang_cues())
+_TOKEN_RE = re.compile(r"[\w\u0400-\u04ff]+", re.UNICODE)
 
 
-def segment_messages(messages: list[str], *, max_segments: int = 6) -> list[dict]:
+def _parse_ts(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    parsed = parse_distilled_at(value)
+    if parsed is not None:
+        return parsed
+    try:
+        return datetime.fromisoformat(str(value).strip()[:19])
+    except ValueError:
+        return None
+
+
+def _significant_tokens(text: str) -> set[str]:
+    return {
+        tok
+        for tok in _TOKEN_RE.findall(text.lower())
+        if len(tok) > 2 and tok not in DOMAIN_STOPWORDS
+    }
+
+
+def _jaccard(left: set[str], right: set[str]) -> float:
+    if not left and not right:
+        return 1.0
+    union = left | right
+    if not union:
+        return 1.0
+    return len(left & right) / len(union)
+
+
+def _collect_breaks(
+    messages: list[str],
+    *,
+    timestamps: list[str | None] | None,
+    pause_minutes: int,
+    jaccard_window: int,
+    jaccard_min: float,
+) -> list[int]:
+    breaks = {0}
+    for i in range(1, len(messages)):
+        if _NEW_TASK.search(messages[i]):
+            breaks.add(i)
+            continue
+        if timestamps and i < len(timestamps):
+            prev_ts = _parse_ts(timestamps[i - 1])
+            curr_ts = _parse_ts(timestamps[i])
+            if (
+                prev_ts is not None
+                and curr_ts is not None
+                and curr_ts - prev_ts > timedelta(minutes=pause_minutes)
+            ):
+                breaks.add(i)
+                continue
+        if i >= jaccard_window:
+            left_msgs = messages[i - jaccard_window : i]
+            right_msgs = messages[i : i + jaccard_window]
+            left_tokens: set[str] = set()
+            right_tokens: set[str] = set()
+            for msg in left_msgs:
+                left_tokens |= _significant_tokens(msg)
+            for msg in right_msgs:
+                right_tokens |= _significant_tokens(msg)
+            if left_tokens and right_tokens and _jaccard(left_tokens, right_tokens) < jaccard_min:
+                breaks.add(i)
+    return sorted(breaks)
+
+
+def segment_messages(
+    messages: list[str],
+    *,
+    timestamps: list[str | None] | None = None,
+    max_segments: int = 6,
+    pause_minutes: int = 30,
+    jaccard_window: int = 5,
+    jaccard_min: float = 0.15,
+) -> list[dict]:
     """
-    Split user messages into topic segments at new-task cues.
+    Split user messages into topic segments.
     Returns [{segment, start, count, preview}, ...].
     """
     if not messages:
         return []
-    breaks = [0]
-    for i, msg in enumerate(messages):
-        if i > 0 and _NEW_TASK.search(msg):
-            breaks.append(i)
-    if breaks[-1] != 0:
-        breaks.append(len(messages))
-    else:
+    breaks = _collect_breaks(
+        messages,
+        timestamps=timestamps,
+        pause_minutes=pause_minutes,
+        jaccard_window=jaccard_window,
+        jaccard_min=jaccard_min,
+    )
+    if breaks == [0]:
         breaks = [0, len(messages)]
+    elif breaks[-1] != len(messages):
+        breaks.append(len(messages))
 
     segments: list[dict] = []
     for idx in range(len(breaks) - 1):

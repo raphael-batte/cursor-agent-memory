@@ -2,11 +2,18 @@
 
 from __future__ import annotations
 
+import re
+
 from lib.message_importance import rank_messages
+
+_CYRILLIC_RE = re.compile(r"[\u0400-\u04ff]")
 
 
 def estimate_tokens(text: str) -> int:
-    return max(1, len(text) // 4)
+    cyrillic = len(_CYRILLIC_RE.findall(text))
+    latin = max(0, len(text) - cyrillic)
+    weighted = latin + int(cyrillic * 1.5)
+    return max(1, weighted // 4)
 
 
 def select_by_importance(
