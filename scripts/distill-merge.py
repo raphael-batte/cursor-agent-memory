@@ -56,11 +56,27 @@ def build_staging_markdown(extract: dict, *, project_rel: str) -> str:
         "",
         "## Summary",
         "",
-        extract.get("first_query", "(no summary)")[:500],
-        "",
-        "## Raw candidates (review — not Decisions)",
+        (extract.get("final_summary") or extract.get("first_query") or "(no summary)")[
+            :500
+        ],
         "",
     ]
+    initial = extract.get("first_query")
+    if initial and extract.get("final_summary"):
+        lines.extend(
+            [
+                "### Initial request",
+                "",
+                str(initial)[:240],
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## Raw candidates (review — not Decisions)",
+            "",
+        ]
+    )
     for msg in msgs[:8]:
         snippet = msg.strip()
         if len(snippet) > 240:
@@ -99,6 +115,17 @@ def build_staging_markdown(extract: dict, *, project_rel: str) -> str:
         for snip in snippets[:5]:
             lines.append(f"- {snip}")
 
+    open_todos = extract.get("open_todos") or []
+    if open_todos:
+        lines.extend(["", "## Open todos (TodoWrite)", ""])
+        for row in open_todos[:8]:
+            if not isinstance(row, dict):
+                continue
+            status = row.get("status", "?")
+            content = str(row.get("content") or "").strip()
+            if content:
+                lines.append(f"- [{status}] {content[:200]}")
+
     lines.extend(
         [
             "",
@@ -113,6 +140,16 @@ def build_staging_markdown(extract: dict, *, project_rel: str) -> str:
         ]
     )
     return "\n".join(lines)
+
+
+def append_pointer_candidate(staging_md: str, candidate: str | None) -> str:
+    if not candidate:
+        return staging_md
+    return (
+        staging_md.rstrip()
+        + "\n\n## Pointer candidate (not applied — curated Next step preserved)\n\n"
+        + f"- {candidate}\n"
+    )
 
 
 def run_merge(
@@ -236,12 +273,30 @@ def run_merge(
 
     if apply:
         result["applied"] = True
-        result["apply_result"] = apply_extract_to_project(
+        apply_result = apply_extract_to_project(
             project_path,
             extract,
             today=entry["distilled_at"],
             bootstrap_decisions=bootstrap_decisions,
+            memory_home=memory_home,
+            manifest_entry=existing,
         )
+        result["apply_result"] = apply_result
+        if apply_result.get("pointer_preserved_curated") and apply_result.get(
+            "pointer_candidate"
+        ):
+            staging_path.write_text(
+                append_pointer_candidate(
+                    staging_path.read_text(encoding="utf-8"),
+                    str(apply_result["pointer_candidate"]),
+                ),
+                encoding="utf-8",
+            )
+        if apply_result.get("next_step_kind") == "extracted":
+            entry["pointer_source"] = apply_result.get("pointer_provenance", "auto")
+            entry["pointer_set_at"] = entry["distilled_at"]
+            upsert_processed(manifest, entry)
+            save_manifest(manifest_path, manifest)
 
     inc = extract.get("incremental") or {}
     if inc.get("incremental_count"):

@@ -50,12 +50,14 @@ def extract_raw_user_texts(jsonl: Path) -> tuple[list[str], ParseStats, str]:
     Parse user messages. Returns (texts, stats, adapter_name).
     Tries Cursor schema, then generic role/content jsonl.
     """
-    try:
-        texts, stats = cursor.extract_raw_user_texts(jsonl)
-        return texts, stats, "cursor"
-    except TranscriptSchemaError:
-        texts, stats = generic.extract_raw_user_texts(jsonl)
-        return texts, stats, "generic"
+    from lib.transcript_parse import parse_transcript
+
+    parsed = parse_transcript(jsonl)
+    if not parsed.user_messages:
+        raise TranscriptSchemaError(
+            f"no usable user messages in transcript: {jsonl}"
+        )
+    return parsed.user_texts(), parsed.stats, parsed.adapter
 
 
 def workspace_from_path(jsonl: Path, projects_root: Path) -> str:
@@ -74,4 +76,7 @@ def workspace_from_path(jsonl: Path, projects_root: Path) -> str:
 
 
 def clear_transcript_cache() -> None:
+    from lib.transcript_parse import clear_parse_cache
+
     cursor.clear_transcript_cache()
+    clear_parse_cache()

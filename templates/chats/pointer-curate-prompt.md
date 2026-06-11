@@ -12,9 +12,10 @@ Use when boundary distill wrote `## Next step` with `_No forward pointer._`, `[?
 
 1. Read staging tail + `## Window summaries` / `## Assistant snippets` if present.
 2. Read current `## Next step` — if placeholder, replace with **one** actionable bullet.
-3. Write a single line the user would recognize as «what we do next» — imperative, ≤200 chars.
-4. Preserve chat language (RU/EN); no secrets; no raw regex dump.
-5. If truly unclear, keep `[?]` but add concrete drill: which file/command to open first.
+3. Prefer `memory-pointer.py set <project> "…"` or bullet prefix `[curated]` so auto-distill does not overwrite.
+4. Write a single line the user would recognize as «what we do next» — imperative, ≤200 chars.
+5. Preserve chat language (RU/EN); no secrets; no raw regex dump.
+6. If truly unclear, keep `[?]` but add concrete drill: which file/command to open first.
 
 ## Quality bar
 

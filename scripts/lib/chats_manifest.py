@@ -291,6 +291,8 @@ def make_processed_entry(
     workspace_path: str | None = None,
     watermark_user_count: int | None = None,
     watermark_tail_hash: str | None = None,
+    pointer_source: str | None = None,
+    pointer_set_at: str | None = None,
 ) -> dict[str, Any]:
     today = distilled_at or now_iso()
     slug = workspace_slug(workspace)
@@ -314,6 +316,10 @@ def make_processed_entry(
         entry["watermark_user_count"] = watermark_user_count
     if watermark_tail_hash:
         entry["watermark_tail_hash"] = watermark_tail_hash
+    if pointer_source:
+        entry["pointer_source"] = pointer_source
+    if pointer_set_at:
+        entry["pointer_set_at"] = pointer_set_at
     return entry
 
 

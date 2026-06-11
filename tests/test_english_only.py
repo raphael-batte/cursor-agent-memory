@@ -22,13 +22,14 @@ SCAN_SUFFIXES = {
 }
 
 SKIP_DIRS = {".git", "__pycache__", ".pytest_cache", "memory"}
-
-
 def iter_repo_text_files(root: Path):
     for path in root.rglob("*"):
         if not path.is_file():
             continue
         if any(part in SKIP_DIRS for part in path.parts):
+            continue
+        parts = path.parts
+        if "templates" in parts and "lang" in parts:
             continue
         if path.suffix.lower() not in SCAN_SUFFIXES:
             continue

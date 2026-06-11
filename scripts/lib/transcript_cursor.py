@@ -88,52 +88,14 @@ def is_redacted_or_noise(text: str) -> bool:
 
 def extract_raw_user_texts(jsonl: Path) -> tuple[list[str], ParseStats]:
     """Parse Cursor jsonl — raw user text before secret sanitization."""
-    if not jsonl.is_file():
-        raise TranscriptSchemaError(f"transcript not found: {jsonl}")
+    from lib.transcript_parse import parse_transcript
 
-    texts: list[str] = []
-    stats = ParseStats()
-
-    for line in jsonl.read_text(encoding="utf-8", errors="replace").splitlines():
-        stats.lines_read += 1
-        if not line.strip():
-            continue
-        try:
-            obj = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        stats.json_lines += 1
-        if obj.get("role") != "user":
-            continue
-        stats.user_rows += 1
-        for block in obj.get("message", {}).get("content", []):
-            if block.get("type") != "text":
-                continue
-            stats.text_blocks += 1
-            text = normalize_user_text(block.get("text", ""))
-            if is_redacted_or_noise(text):
-                continue
-            texts.append(text)
-
-    if stats.lines_read == 0:
-        raise TranscriptSchemaError(f"empty transcript: {jsonl}")
-    if stats.json_lines == 0:
+    parsed = parse_transcript(jsonl)
+    if not parsed.user_messages:
         raise TranscriptSchemaError(
-            f"no JSON lines in transcript (unknown format?): {jsonl}"
+            f"no usable user messages in transcript: {jsonl}"
         )
-    if stats.user_rows == 0:
-        raise TranscriptSchemaError(
-            f"no user role rows (schema changed?): {jsonl}"
-        )
-    if stats.text_blocks == 0:
-        raise TranscriptSchemaError(
-            f"no text content blocks in user messages: {jsonl}"
-        )
-    if not texts:
-        raise TranscriptSchemaError(
-            f"only redacted/noise user messages in transcript: {jsonl}"
-        )
-    return texts, stats
+    return parsed.user_texts(), parsed.stats
 
 
 def workspace_from_path(jsonl: Path, projects_root: Path) -> str:

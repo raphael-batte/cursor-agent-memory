@@ -32,6 +32,22 @@ class TestDistillMerge(unittest.TestCase):
         self.assertIn("Raw candidates", md)
         self.assertIn("not Decisions", md)
 
+    def test_staging_uses_final_summary(self) -> None:
+        extract = {
+            "uuid": "abc",
+            "workspace_slug": "app",
+            "first_query": "Initial deploy question",
+            "final_summary": "Assistant wrapped up: run flutter test on device tonight.",
+            "user_messages": ["deploy please"],
+            "user_message_count": 1,
+            "strategy": "tail",
+            "keywords_hit": [],
+        }
+        md = dm.build_staging_markdown(extract, project_rel="projects/app.md")
+        self.assertIn("flutter test on device", md)
+        self.assertIn("### Initial request", md)
+        self.assertIn("Initial deploy question", md)
+
     def test_staging_recent_has_chat_link(self) -> None:
         extract = {
             "uuid": "chat-uuid-full",

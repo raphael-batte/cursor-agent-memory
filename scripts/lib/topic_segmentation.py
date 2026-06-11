@@ -2,18 +2,9 @@
 
 from __future__ import annotations
 
-import re
+from lib.lang_cues import build_new_task_pattern, load_lang_cues
 
-_NEW_TASK = re.compile(
-    r"(?:^|\b)(?:"
-    r"new task|different topic|switching to|let'?s move on|"
-    r"\u043e\u0442\u0434\u0435\u043b\u044c\u043d\u0430\u044f \u0437\u0430\u0434\u0430\u0447\u0430|"
-    r"\u0434\u0440\u0443\u0433\u0430\u044f \u0442\u0435\u043c\u0430|"
-    r"\u043f\u0435\u0440\u0435\u043a\u043b\u044e\u0447\u0438\u043c\u0441\u044f|"
-    r"\u043d\u043e\u0432\u0430\u044f \u0437\u0430\u0434\u0430\u0447\u0430"
-    r")\b",
-    re.I,
-)
+_NEW_TASK = build_new_task_pattern(load_lang_cues())
 
 
 def segment_messages(messages: list[str], *, max_segments: int = 6) -> list[dict]:

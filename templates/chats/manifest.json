@@ -5,6 +5,8 @@
     "distilled_at": "YYYY-MM-DD when distill was merged into projects/*.md",
     "distilled_to": "array of project files updated",
     "stale": "re-distill when date > distilled_at",
+    "pointer_source": "curated | live | auto — class of last applied Next step",
+    "pointer_set_at": "ISO timestamp when pointer_source last changed",
     "secrets_policy": "no passwords/tokens/keys in hub; distill redacts; verify-memory weekly"
   },
   "processed": [],

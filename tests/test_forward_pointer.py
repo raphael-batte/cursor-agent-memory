@@ -13,6 +13,8 @@ sys.path.insert(0, str(SCRIPTS))
 
 from lib import forward_pointer as fp  # noqa: E402
 
+FIXTURE_TODOS = Path(__file__).resolve().parent / "fixtures" / "chat-with-todos.jsonl"
+
 
 class TestForwardPointer(unittest.TestCase):
     def test_pattern_next_step_en(self) -> None:
@@ -113,6 +115,14 @@ class TestForwardPointer(unittest.TestCase):
         self.assertIsNotNone(result.text)
         self.assertGreaterEqual(result.confidence, 0.8)
         self.assertEqual(result.source, "user_commitment")
+
+    def test_todo_state_beats_assistant_pattern(self) -> None:
+        extract = {"user_messages": [], "source_path": str(FIXTURE_TODOS)}
+        result = fp.extract_forward_pointer_result(extract)
+        self.assertIsNotNone(result.text)
+        self.assertEqual(result.source, "todo_state")
+        self.assertGreaterEqual(result.confidence, 0.85)
+        self.assertIn("device QA", result.text)
 
     def test_user_fallback_with_action_hint(self) -> None:
         extract = {

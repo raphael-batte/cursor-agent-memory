@@ -14,6 +14,17 @@ from lib.forward_pointer import (
 )
 from lib.message_importance import mechanical_bullets
 from lib.secrets_guard import scan_file
+from lib.pointer_metrics import maybe_log_pointer_clobbered
+from lib.pointer_provenance import (
+    LIVE_POINTER_SOURCES,
+    PROVENANCE_AUTO,
+    PROVENANCE_CURATED,
+    PROVENANCE_LIVE,
+    find_curated_next_step,
+    format_curated_next_step,
+    pointer_provenance_class,
+    watermark_changed,
+)
 from lib.timestamps import now_iso
 
 LAST_UPDATED = re.compile(r"^_Last updated:\s*.+$", re.M | re.I)
@@ -210,6 +221,8 @@ def apply_extract_to_project(
     max_recent: int = 3,
     today: str | None = None,
     bootstrap_decisions: bool = False,
+    memory_home: Path | None = None,
+    manifest_entry: dict | None = None,
 ) -> dict:
     """
     Bookkeeping merge: _Last updated_ + Recent≤3.
@@ -257,14 +270,47 @@ def apply_extract_to_project(
             sections["Decisions"] = _format_bullets(seeds)
             decisions_added = len(seeds)
 
-    pointer_result = extract_forward_pointer_result(extract)
-    next_step = pointer_result.text
-    next_body, next_kind = format_next_step_line(
-        extract, next_step, sections.get("Next step", "")
+    existing_next_bullets = _bullets(sections.get("Next step", ""))
+    curated_text = find_curated_next_step(existing_next_bullets)
+    prev_next_step = _previous_real_next_step(existing_next_bullets)
+    pointer_result = extract_forward_pointer_result(extract, memory_home=memory_home)
+    pointer_candidate = pointer_result.text
+    pointer_preserved_curated = False
+    pointer_provenance = PROVENANCE_AUTO
+
+    if curated_text:
+        strong = pointer_result.source in LIVE_POINTER_SOURCES
+        wm_changed = watermark_changed(extract, manifest_entry)
+        if strong and wm_changed and pointer_candidate:
+            next_body, next_kind = format_next_step_line(
+                extract, pointer_candidate, sections.get("Next step", "")
+            )
+            pointer_provenance = pointer_provenance_class(pointer_result.source)
+        else:
+            next_body = sections.get("Next step", "").strip()
+            if not next_body:
+                next_body = format_curated_next_step(curated_text)
+            next_kind = "curated_preserved"
+            pointer_preserved_curated = True
+            pointer_provenance = PROVENANCE_CURATED
+    else:
+        next_body, next_kind = format_next_step_line(
+            extract, pointer_candidate, sections.get("Next step", "")
+        )
+        if next_kind == "extracted":
+            pointer_provenance = pointer_provenance_class(pointer_result.source)
+
+    maybe_log_pointer_clobbered(
+        memory_home,
+        workspace_slug=str(extract.get("workspace_slug") or project_path.stem),
+        new_chat_id=str(extract.get("uuid") or ""),
+        existing_recent=existing_recent,
+        prev_next_step=prev_next_step,
+        next_kind=next_kind if next_kind != "curated_preserved" else "extracted",
     )
     sections["Next step"] = next_body
-    next_step_updated = True
-    next_step_placeholder = next_kind != "extracted"
+    next_step_updated = next_kind != "curated_preserved"
+    next_step_placeholder = next_kind not in ("extracted", "curated_preserved")
 
     merged = _join_sections(preamble, sections)
 
@@ -289,6 +335,9 @@ def apply_extract_to_project(
         "next_step_placeholder": next_step_placeholder,
         "pointer_confidence": pointer_result.confidence,
         "pointer_source": pointer_result.source,
+        "pointer_provenance": pointer_provenance,
+        "pointer_preserved_curated": pointer_preserved_curated,
+        "pointer_candidate": pointer_candidate if pointer_preserved_curated else None,
         "recent_lines": min(len(recent_items), max_recent),
         "lines": len(merged.splitlines()),
         "over_limit": len(merged.splitlines()) > MAX_LAYER_FILE_LINES,

@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import json
 import re
-from pathlib import Path
 
 from lib.defaults import ASSISTANT_SNIPPET_MAX, DEFAULT_KEYWORDS
 from lib.secrets_guard import sanitize_message
-from lib.transcript_cursor import is_redacted_or_noise
+from lib.transcript_parse import ParsedTranscript, parse_transcript
 
 _DECISION_LINE = re.compile(
     r"(?:decided|decision|recommend|summary|next step|deploy|architecture|"
@@ -31,35 +29,15 @@ def _score_assistant(text: str) -> float:
     return score
 
 
-def extract_assistant_snippets(
-    jsonl: Path,
+def extract_assistant_snippets_from_parsed(
+    parsed: ParsedTranscript,
     *,
     max_snippets: int = ASSISTANT_SNIPPET_MAX,
     tail_rows: int = 30,
 ) -> list[str]:
-    if not jsonl.is_file():
-        return []
     rows: list[tuple[float, str]] = []
-    for line in jsonl.read_text(encoding="utf-8", errors="replace").splitlines():
-        if not line.strip():
-            continue
-        try:
-            obj = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if obj.get("role") != "assistant":
-            continue
-        parts: list[str] = []
-        for block in obj.get("message", {}).get("content", []):
-            if block.get("type") != "text":
-                continue
-            text = block.get("text", "").strip()
-            if text and not is_redacted_or_noise(text):
-                parts.append(text)
-        if not parts:
-            continue
-        blob = "\n".join(parts)
-        clean, _n = sanitize_message(blob)
+    for msg in parsed.assistant_blocks[-tail_rows:]:
+        clean, _n = sanitize_message(msg.text)
         if not clean:
             continue
         score = _score_assistant(clean)
@@ -70,7 +48,6 @@ def extract_assistant_snippets(
             snippet = snippet[:317].rstrip() + "..."
         rows.append((score, snippet))
 
-    rows = rows[-tail_rows:]
     rows.sort(key=lambda r: -r[0])
     out: list[str] = []
     seen: set[str] = set()
@@ -83,3 +60,20 @@ def extract_assistant_snippets(
         if len(out) >= max_snippets:
             break
     return out
+
+
+def extract_assistant_snippets(
+    jsonl,
+    *,
+    max_snippets: int = ASSISTANT_SNIPPET_MAX,
+    tail_rows: int = 30,
+) -> list[str]:
+    from pathlib import Path
+
+    path = Path(jsonl)
+    if not path.is_file():
+        return []
+    parsed = parse_transcript(path)
+    return extract_assistant_snippets_from_parsed(
+        parsed, max_snippets=max_snippets, tail_rows=tail_rows
+    )

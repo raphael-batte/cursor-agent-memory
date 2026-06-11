@@ -151,6 +151,75 @@ class TestProjectMerge(unittest.TestCase):
             self.assertIn("[?]", text)
             self.assertIn("Deploy to production", text)
 
+    def test_curated_next_step_preserved_on_weak_auto(self) -> None:
+        extract = {
+            "uuid": "new-chat-uuid",
+            "workspace_slug": "app",
+            "user_messages": ["hi"],
+            "user_message_count": 1,
+            "strategy": "tail",
+            "watermark_user_count": 1,
+            "watermark_tail_hash": "abc",
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "app.md"
+            path.write_text(
+                "## Next step\n\n- [curated] Run full smoke suite before release\n\n"
+                "## Recent\n\n- [old](aaaa-bbbb-cccc-dddd-eeee-ffff-0000) 2026-06-01\n",
+                encoding="utf-8",
+            )
+            result = pm.apply_extract_to_project(
+                path,
+                extract,
+                today="2026-06-08",
+                manifest_entry={
+                    "watermark_user_count": 1,
+                    "watermark_tail_hash": "abc",
+                },
+            )
+            text = path.read_text(encoding="utf-8")
+            self.assertTrue(result["pointer_preserved_curated"])
+            self.assertIn("[curated]", text)
+            self.assertIn("smoke suite", text)
+
+    def test_curated_overwritten_by_live_signal_and_watermark(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            jsonl = Path(tmp) / "c.jsonl"
+            jsonl.write_text(
+                '{"role":"user","message":{"content":[{"type":"text",'
+                '"text":"<user_query>okay then deploy security patch to staging</user_query>"}]}}\n',
+                encoding="utf-8",
+            )
+            extract = {
+                "uuid": "x",
+                "workspace_slug": "app",
+                "user_messages": [],
+                "user_message_count": 5,
+                "strategy": "tail",
+                "source_path": str(jsonl),
+                "watermark_user_count": 5,
+                "watermark_tail_hash": "newhash",
+            }
+            path = Path(tmp) / "app.md"
+            path.write_text(
+                "## Next step\n\n- [curated] Old curated step here for test\n\n## Recent\n\n",
+                encoding="utf-8",
+            )
+            result = pm.apply_extract_to_project(
+                path,
+                extract,
+                today="2026-06-08",
+                manifest_entry={
+                    "watermark_user_count": 1,
+                    "watermark_tail_hash": "oldhash",
+                },
+            )
+            text = path.read_text(encoding="utf-8")
+            self.assertFalse(result["pointer_preserved_curated"])
+            self.assertEqual(result["next_step_kind"], "extracted")
+            self.assertIn("security patch", text)
+            self.assertNotIn("[curated]", text)
+
     def test_apply_leaves_summary_empty(self) -> None:
         extract = {
             "uuid": "x",

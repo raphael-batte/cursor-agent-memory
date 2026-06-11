@@ -12,7 +12,8 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
-from lib.assistant_snippets import extract_assistant_snippets  # noqa: E402
+from lib.assistant_snippets import extract_assistant_snippets_from_parsed  # noqa: E402
+from lib.transcript_parse import parse_transcript  # noqa: E402
 from lib.defaults import (  # noqa: E402
     AUTO_SPREAD_THRESHOLD,
     DEFAULT_KEYWORDS,
@@ -101,7 +102,9 @@ def build_window_summaries(messages: list[str]) -> list[dict]:
 
 
 def parse_user_messages(jsonl: Path) -> tuple[list[str], int, str]:
-    raw_texts, _stats, adapter = extract_raw_user_texts(jsonl)
+    parsed = parse_transcript(jsonl)
+    raw_texts = parsed.user_texts()
+    adapter = parsed.adapter
     all_msgs: list[str] = []
     secrets_redacted = 0
     for text in raw_texts:
@@ -158,7 +161,22 @@ def build_extract(
     memory_home: Path | None = None,
     manifest_entry: dict | None = None,
 ) -> dict:
-    all_msgs, secrets_redacted, adapter = parse_user_messages(jsonl)
+    parsed = parse_transcript(jsonl)
+    all_msgs: list[str] = []
+    secrets_redacted = 0
+    for text in parsed.user_texts():
+        clean, n = sanitize_message(text)
+        secrets_redacted += n
+        if clean is None:
+            continue
+        if is_terminal_noise(clean):
+            continue
+        all_msgs.append(clean)
+    if not all_msgs:
+        raise TranscriptSchemaError(
+            f"no usable user messages after sanitization: {jsonl}"
+        )
+    adapter = parsed.adapter
     total = len(all_msgs)
     effective = resolve_strategy(strategy, total)
 
@@ -175,11 +193,16 @@ def build_extract(
     st = jsonl.stat()
     truncated = effective != "all" and total > len(messages)
     first_query = messages[0][:140] if messages else "(no user text)"
-    assistant_snippets = extract_assistant_snippets(jsonl)
+    final_summary = parsed.last_assistant_summary()
+    assistant_snippets = extract_assistant_snippets_from_parsed(parsed)
     window_summaries = (
         build_window_summaries(all_msgs) if total >= MAP_REDUCE_THRESHOLD else []
     )
     topic_segments = segment_messages(all_msgs) if total >= 20 else []
+    open_todo_items = parsed.open_todos()
+    from lib.transcript_stats import transcript_watermark  # noqa: E402
+
+    wm = transcript_watermark(jsonl)
 
     incremental: dict | None = None
     if memory_home is not None:
@@ -198,6 +221,7 @@ def build_extract(
         "workspace": workspace,
         "workspace_slug": workspace_slug(workspace),
         "first_query": first_query,
+        "final_summary": final_summary,
         "user_messages": messages,
         "user_message_count": total,
         "strategy": effective,
@@ -210,6 +234,12 @@ def build_extract(
         "assistant_snippets": assistant_snippets,
         "window_summaries": window_summaries,
         "topic_segments": topic_segments,
+        "open_todos": [
+            {"id": t.id, "content": t.content, "status": t.status} for t in open_todo_items
+        ],
+        "all_todos_completed": parsed.all_todos_completed,
+        "watermark_user_count": int(wm.get("user_message_count") or 0),
+        "watermark_tail_hash": str(wm.get("tail_hash") or ""),
     }
     if incremental:
         payload["incremental"] = incremental

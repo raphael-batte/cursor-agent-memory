@@ -5,17 +5,11 @@ from __future__ import annotations
 import re
 
 from lib.defaults import DEFAULT_KEYWORDS
+from lib.lang_cues import build_action_pattern, build_correction_pattern, load_lang_cues
 
-_CORRECTION = re.compile(
-    r"(?:don't|do not|instead|wrong|fix|broken|regression|revert|not working|"
-    r"\u043d\u0435\s+\u043d\u0430\u0434\u043e|\u0432\u043c\u0435\u0441\u0442\u043e|\u043e\u0448\u0438\u0431\u043a)",
-    re.I,
-)
-_ACTION = re.compile(
-    r"(?:\bcd\s+|\bnpm\s+|\bpython3?\s+|\bbash\s+|\./scripts/|\bdeploy\b|\bcommit\b|"
-    r"\bflutter\s+|\brun\s+)",
-    re.I,
-)
+_CUES = load_lang_cues()
+_CORRECTION = build_correction_pattern(_CUES)
+_ACTION = build_action_pattern(_CUES)
 _CODE = re.compile(r"```|`[^`]+`")
 
 

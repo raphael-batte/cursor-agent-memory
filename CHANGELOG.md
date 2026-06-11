@@ -6,6 +6,35 @@ Data hub (`$MEMORY_HOME`) is **not** versioned with this file.
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-06-08
+
+### Added
+
+- **`lib/structured_signals.py`** — TodoWrite open items as `todo_state` pointer signal (0.90); skipped when all todos completed
+- **`lib/pointer_provenance.py`** — curated / live / auto classes; `[curated]` marker; watermark gate for overwriting curated Next step
+- **`memory-pointer.py`** — `set` / `show` curated ## Next step; updates manifest `pointer_source` / `pointer_set_at`
+- Extract fields: `open_todos`, `all_todos_completed`, watermark; staging ## Open todos + ## Pointer candidate when curated preserved
+
+### Changed
+
+- **`forward_pointer`** — `todo_state` tier; `assistant_pattern` 0.55; weak assistant pattern when last user message is a question
+- **`apply_extract_to_project`** — does not clobber `[curated]` unless live signal + watermark change
+- **Manifest** — optional `pointer_source`, `pointer_set_at` on processed entries
+
+## [0.14.0] - 2026-06-08
+
+### Added
+
+- **`lib/transcript_parse.py`** — unified JSONL parser (user/assistant/tool/todo state); single-read cache
+- **`templates/lang/en.json`**, **`ru.json`** + **`lib/lang_cues.py`** — cue phrases for pointer, corrections, topic breaks; optional hub `config.lang` override
+- **`lib/pointer_metrics.py`** — `pointer_clobbered_cross_chat` event when merge overwrites another chat's Next step
+- Extract field **`final_summary`**; staging ## Summary prefers assistant tail over `first_query`
+
+### Changed
+
+- **`forward_pointer`**, **`message_importance`**, **`topic_segmentation`** — patterns built from lang JSON (framework source stays English-only)
+- **`distill-extract`**, **`assistant_snippets`**, **`forward_pointer`** — use shared transcript parser
+
 ## [0.13.0] - 2026-06-08
 
 ### Added
