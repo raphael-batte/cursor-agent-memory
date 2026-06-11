@@ -115,6 +115,12 @@ def analyze_metrics(
         feedback_followed / len(adherence_rows) if adherence_rows else None
     )
 
+    search_events = [r for r in recent if r.get("event") == "search_query"]
+    search_with_hits = sum(1 for r in search_events if int(r.get("hits") or 0) > 0)
+    search_hit_rate = (
+        search_with_hits / len(search_events) if search_events else None
+    )
+
     truncation_rate = truncated / len(distilled) if distilled else None
     error_rate = len(errors) / len(recent) if recent else None
     crashes = [r for r in recent if r.get("status") == "crash"]
@@ -175,6 +181,8 @@ def analyze_metrics(
         "pointer_feedback_unmeasured": feedback_unmeasured,
         "pointer_feedback_miss": feedback_miss,
         "pointer_feedback_skip": feedback_skip,
+        "search_queries": len(search_events),
+        "search_hit_rate": search_hit_rate,
         "crashes": len(crashes),
         "session_starts": session_starts,
         "boundary_events": boundary_events,

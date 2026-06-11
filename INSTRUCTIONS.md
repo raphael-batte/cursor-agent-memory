@@ -27,6 +27,7 @@ See [ONBOARDING.md](ONBOARDING.md) · [docs/SYNC-AND-TRIGGERS.md](docs/SYNC-AND-
 | Servers, paths, ports | `$MEMORY_HOME/context/infra.md` |
 | Where we stopped | `$MEMORY_HOME/chats/projects/<slug>.md` → **## Next step** (auto on distill) |
 | What we discussed | `$MEMORY_HOME/chats/projects/<slug>.md` |
+| «How did we do X» / find past decision | `memory-search.py "terms"` first, then hit `path#section` |
 | Full chat when distill thin | `[title](uuid)` link in distill ## Recent |
 | What worked / failed (+/−) | `$MEMORY_HOME/feedback/{wins,fails}.md` |
 | How user thinks | `$MEMORY_HOME/context/preferences.md` |

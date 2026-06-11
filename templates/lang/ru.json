@@ -31,5 +31,13 @@
     "вместо",
     "ошибка"
   ],
+  "search_synonyms": [
+    ["prod", "production", "прод", "продакшн"],
+    ["deploy", "deployment", "деплой", "депло", "выклад"],
+    ["commit", "push", "коммит", "пуш"],
+    ["ssl", "https", "сертификат", "tls"],
+    ["docker", "контейнер", "compose"],
+    ["test", "tests", "тест", "смоук", "smoke"]
+  ],
   "action_verbs": ["запусти", "деплой", "коммит"]
 }

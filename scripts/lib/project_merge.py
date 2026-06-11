@@ -24,6 +24,8 @@ from lib.pointer_provenance import (
     pointer_provenance_class,
     watermark_changed,
 )
+from lib.markdown_sections import bullets as _bullets
+from lib.markdown_sections import parse_sections as _parse_sections
 from lib.timestamps import now_iso
 
 LAST_UPDATED = re.compile(r"^_Last updated:\s*.+$", re.M | re.I)
@@ -39,26 +41,6 @@ DEFAULT_SECTIONS = (
 
 def _today() -> str:
     return now_iso()
-
-
-def _parse_sections(text: str) -> tuple[str, dict[str, str]]:
-    preamble_lines: list[str] = []
-    sections: dict[str, list[str]] = {}
-    current: str | None = None
-
-    for line in text.splitlines():
-        m = re.match(r"^##\s+(.+?)\s*$", line)
-        if m:
-            current = m.group(1).strip()
-            sections[current] = []
-            continue
-        if current is None:
-            preamble_lines.append(line)
-        else:
-            sections[current].append(line)
-
-    preamble = "\n".join(preamble_lines).strip()
-    return preamble, {k: "\n".join(v).strip() for k, v in sections.items()}
 
 
 def _join_sections(preamble: str, sections: dict[str, str]) -> str:
@@ -84,15 +66,6 @@ def _join_sections(preamble: str, sections: dict[str, str]) -> str:
             lines.append(body.strip())
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
-
-
-def _bullets(block: str) -> list[str]:
-    out: list[str] = []
-    for line in block.splitlines():
-        m = re.match(r"^-\s+(.*)$", line.strip())
-        if m:
-            out.append(m.group(1).strip())
-    return out
 
 
 def _format_bullets(items: list[str]) -> str:

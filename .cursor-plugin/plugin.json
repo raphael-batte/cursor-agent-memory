@@ -1,8 +1,8 @@
 {
   "name": "agent-memory",
   "displayName": "Agent Memory",
-  "version": "0.17.0",
-  "description": "Remembers what matters between Cursor sessions: preferences, project context, and where you left off, in private files that survive plugin updates. Memory updates automatically; secrets are never stored.",
+  "version": "0.19.0",
+  "description": "Persistent memory for Cursor: project distill with Next step pointers, global context, feedback, and hub search across past decisions. Private local files, auto-distill on session boundaries, secrets redacted. No cloud required.",
   "author": {
     "name": "raphaelbatte"
   },
@@ -17,7 +17,8 @@
     "cursor",
     "transcripts",
     "hooks",
-    "security"
+    "security",
+    "search"
   ],
   "category": "developer-tools",
   "tags": [

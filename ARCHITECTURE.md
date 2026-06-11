@@ -82,6 +82,20 @@ transcript jsonl
 
 Details: [INSTRUCTIONS.md → Chat memory](INSTRUCTIONS.md#chat-memory-chats) · [MIGRATION.md](MIGRATION.md).
 
+## Hub search (v0.19+)
+
+No vector DB — on-demand **BM25-lite** over searchable units (bullets + context paragraphs):
+
+```
+memory-search.py "query" [--layer chats,context,feedback] [--deep] [--top 8]
+    → lib/hub_search.py   scan hub markdown (+ optional extracts within retention_days)
+    → templates/lang search_synonyms   query expansion (prod/production/…)
+    → metrics.jsonl event search_query
+```
+
+- **Deep tier** (`--deep`) reads `chats/extracts/*.json` not older than `retention_days` in hub `config.json` — same window as `memory-doctor --fix` cleanup.
+- Agents: «how did we do X» / past decision → run search before reading files blindly ([INSTRUCTIONS.md](INSTRUCTIONS.md)).
+
 ## Skills and hooks
 
 **Plugin bundle** ships `skills/agent-memory/SKILL.md` and `hooks/hooks.json` (no global `~/.cursor/hooks.json` merge). Other protocols under `skills/*/SKILL.md` for on-demand Read.

@@ -30,6 +30,14 @@
     "revert",
     "not working"
   ],
+  "search_synonyms": [
+    ["prod", "production", "staging"],
+    ["deploy", "deployment"],
+    ["commit", "push", "merge"],
+    ["ssl", "https", "tls", "certificate"],
+    ["docker", "container", "compose"],
+    ["test", "tests", "smoke", "ci"]
+  ],
   "action_verbs": [
     "run",
     "deploy",

@@ -10,7 +10,7 @@ description: >
 
 # Agent Memory
 
-**Version:** 0.17.0 — see [VERSIONING.md](../../VERSIONING.md)
+**Version:** 0.19.0 — see [VERSIONING.md](../../VERSIONING.md)
 
 **Full protocol:** [INSTRUCTIONS.md](../../INSTRUCTIONS.md) · **Overview:** [ARCHITECTURE.md](../../ARCHITECTURE.md)
 
@@ -145,12 +145,30 @@ Then **offer** (user confirms each):
 
 ---
 
+## Search (past decisions / «how we did X»)
+
+**Triggers:** "how did we", "what did we decide about", "find in memory", past decision lookup
+
+Run search **before** opening hub files at random:
+
+```bash
+python3 "$PLUGIN_ROOT/scripts/memory-search.py" "your terms" \
+  --memory-home "$MEMORY_HOME" --top 8
+# Deeper (extract JSON, same retention_days as doctor cleanup):
+python3 "$PLUGIN_ROOT/scripts/memory-search.py" "your terms" --deep --top 8
+```
+
+Use hits: open `path#section`; follow `drill` `[title](uuid)` for transcript tail if distill is thin.
+
+---
+
 ## Session start (routing)
 
 | Order | Layer | Read |
 |-------|-------|------|
 | 1 | Distill | `$MEMORY_HOME/chats/projects/<slug>.md` → **## Next step** |
 | 2 (if unclear) | Global | `$MEMORY_HOME/context/GLOBAL_CONTEXT.md` |
+| Past decision / cross-chat | Search | `memory-search.py` then targeted Read |
 
 **If `## Next step` shows placeholder:** drill `[title](uuid)` in that line (transcript tail only).
 

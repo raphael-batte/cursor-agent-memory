@@ -6,7 +6,24 @@ Data hub (`$MEMORY_HOME`) is **not** versioned with this file.
 
 ## [Unreleased]
 
-## [0.18.0] - 2026-06-08
+## [0.19.0] - 2026-06-11
+
+### Added
+
+- **`lib/hub_search.py`** + **`memory-search.py`** — BM25-lite search over hub bullets (no DB); prefix token match RU/EN; section weights; recency boost
+- **`lib/markdown_sections.py`** — shared section/bullet parser for merge + search
+- **`lib/search_lang.py`** — `search_synonyms` in `templates/lang/*.json` for query expansion
+- **`--deep`** search tier — `chats/extracts/*.json` within `retention_days` (same knob as hub cleanup)
+- **`scripts/verify-hub-upgrade.sh`** — post-upgrade doctor + verify + search smoke
+- **`memory-health`** — `search_queries`, `search_hit_rate`
+
+### Changed
+
+- **Marketplace copy** — `plugin.json` description and version sync with `VERSION`
+- **Docs** — README search section; SKILL routing for «how did we do X»; ARCHITECTURE search layer
+- **CHANGELOG** — corrected release dates for 0.14–0.18
+
+## [0.18.0] - 2026-06-11
 
 ### Added
 

@@ -42,6 +42,8 @@ Manual refresh anytime: **`@agent-memory`** → **sync with agent memory**.
 
 On session boundaries (`preCompact`, `sessionEnd`), hooks run incremental distill: scan new or changed Cursor transcripts, redact secrets, update the manifest, and write project summaries with a **`## Next step`** forward pointer.
 
+**Search past decisions** without a database: `memory-search.py` scores hub bullets (and optional extract JSON with `--deep`) using BM25-lite + synonym expansion from `templates/lang/`.
+
 On first install, `sessionStart` creates hub template files and an anchor config outside the plugin bundle. Full setup — hub path, migrate from backup, first distill scope — runs in chat via the skill wizard.
 
 The skill routes the agent to the right memory layer per task (global context, feedback, or project chat distill). Agents follow **`## Next step`** in project files to know where to continue; weak pointers link back to the source chat.
@@ -135,7 +137,7 @@ flowchart TB
 |------|----------|
 | Skills | `skills/agent-memory/`, `skills/semantic-merge/` |
 | Hooks | `hooks/hooks.json` — sessionStart, sessionEnd, preCompact, afterFileEdit |
-| Scripts | distill, sync, verify, doctor, first-run |
+| Scripts | distill, sync, search, verify, doctor, first-run |
 | Templates | hub scaffolds (materialized into `$MEMORY_HOME`) |
 
 **Tests:** `bash tests/run-tests.sh` (170+ checks).
@@ -145,8 +147,11 @@ flowchart TB
 ```bash
 python3 scripts/sync-memory.py --scan-only
 python3 scripts/sync-memory.py --days 90 --limit 30
+python3 scripts/memory-search.py "deploy ssl" --memory-home "$MEMORY_HOME" --top 8
+python3 scripts/memory-search.py "migration" --deep   # extracts within retention_days
 python3 scripts/memory-doctor.py --fix
 python3 scripts/verify-memory.py --memory-home "$MEMORY_HOME"
+bash scripts/verify-hub-upgrade.sh                  # after plugin upgrade
 bash scripts/migrate-memory.sh --from /old/hub --to "$MEMORY_HOME"
 ```
 
@@ -160,4 +165,4 @@ If you used symlink skills or global `~/.cursor/hooks.json` entries before the p
 
 Created by [raphaelbatte](https://github.com/raphael-batte) · [raphbatte.com](https://raphbatte.com)
 
-**Version:** 0.17.0 — see [VERSIONING.md](VERSIONING.md)
+**Version:** 0.19.0 — see [VERSIONING.md](VERSIONING.md)

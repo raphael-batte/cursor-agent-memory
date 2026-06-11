@@ -86,13 +86,24 @@ else
 fi
 
 # Sync version line in README and SKILL.md
-for f in "$REPO_ROOT/README.md" "$REPO_ROOT/SKILL.md"; do
+for f in "$REPO_ROOT/README.md" "$REPO_ROOT/SKILL.md" "$REPO_ROOT/skills/agent-memory/SKILL.md"; do
   [[ -f "$f" ]] || continue
   if grep -q '^\*\*Version:\*\*' "$f"; then
     sed -i '' "s/^\*\*Version:\*\*.*/**Version:** ${NEW} — see [VERSIONING.md](VERSIONING.md)/" "$f"
   fi
 done
 
+PLUGIN_JSON="$REPO_ROOT/.cursor-plugin/plugin.json"
+if [[ -f "$PLUGIN_JSON" ]]; then
+  python3 - "$PLUGIN_JSON" "$NEW" <<'PY'
+import json, sys
+path, ver = sys.argv[1], sys.argv[2]
+data = json.loads(open(path, encoding="utf-8").read())
+data["version"] = ver
+open(path, "w", encoding="utf-8").write(json.dumps(data, indent=2) + "\n")
+PY
+fi
+
 echo "Bumped: ${CURRENT} → ${NEW}"
 echo "CHANGELOG: ### ${SECTION} — ${MSG}"
-echo "Stage: git add VERSION CHANGELOG.md README.md SKILL.md"
+echo "Stage: git add VERSION CHANGELOG.md README.md SKILL.md skills/agent-memory/SKILL.md .cursor-plugin/plugin.json"
