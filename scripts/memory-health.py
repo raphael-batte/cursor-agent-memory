@@ -78,6 +78,17 @@ def analyze_metrics(
 
     incremental = sum(1 for r in distilled if r.get("incremental"))
     map_reduce = sum(1 for r in distilled if (r.get("window_count") or 0) > 0)
+    live_distills = sum(1 for r in recent if r.get("event") == "liveDistill" and r.get("status") == "distilled")
+    budget_exceeded = sum(1 for r in distilled if r.get("token_budget_exceeded"))
+
+    feedback = [r for r in recent if r.get("event") == "pointer_feedback"]
+    feedback_hits = sum(1 for r in feedback if r.get("outcome") == "hit")
+    feedback_miss = sum(1 for r in feedback if r.get("outcome") == "miss")
+    feedback_skip = sum(1 for r in feedback if r.get("outcome") == "skip")
+    feedback_total = feedback_hits + feedback_miss
+    session_pointer_hit_rate = (
+        feedback_hits / feedback_total if feedback_total else None
+    )
 
     truncation_rate = truncated / len(distilled) if distilled else None
     error_rate = len(errors) / len(recent) if recent else None
@@ -126,6 +137,13 @@ def analyze_metrics(
         "p95_distill_ms": p95_ms,
         "incremental_distills": incremental,
         "map_reduce_distills": map_reduce,
+        "live_distills": live_distills,
+        "token_budget_exceeded": budget_exceeded,
+        "pointer_feedback_events": len(feedback),
+        "pointer_session_hit_rate": session_pointer_hit_rate,
+        "pointer_feedback_hits": feedback_hits,
+        "pointer_feedback_miss": feedback_miss,
+        "pointer_feedback_skip": feedback_skip,
         "crashes": len(crashes),
         "session_starts": session_starts,
         "boundary_events": boundary_events,
@@ -183,7 +201,14 @@ def print_report(data: dict) -> None:
     print(f"  Errors:         {data['errors']}")
     rate = data.get("pointer_extracted_rate")
     if rate is not None:
-        print(f"  Pointer hit:    {rate * 100:.0f}% extracted")
+        print(f"  Pointer hit:    {rate * 100:.0f}% extracted (distill)")
+    session_rate = data.get("pointer_session_hit_rate")
+    if session_rate is not None:
+        print(
+            f"  Session hit:    {session_rate * 100:.0f}% "
+            f"({data.get('pointer_feedback_hits', 0)} hit / "
+            f"{data.get('pointer_feedback_miss', 0)} miss)"
+        )
     bl = data.get("baseline") or {}
     if bl.get("median_hit_rate") is not None:
         print(
@@ -205,6 +230,9 @@ def print_report(data: dict) -> None:
         print(f"  Avg / p95 ms:   {data['avg_distill_ms']} / {data.get('p95_distill_ms') or '—'}")
     print(f"  Incremental:    {data['incremental_distills']}")
     print(f"  Map-reduce:     {data['map_reduce_distills']}")
+    print(f"  Live distills:  {data.get('live_distills', 0)}")
+    if data.get("token_budget_exceeded"):
+        print(f"  Budget exceed:  {data['token_budget_exceeded']}")
     mark = "✓" if data.get("healthy") else "⚠"
     print(f"  {mark} {'healthy' if data.get('healthy') else 'review metrics'}")
 

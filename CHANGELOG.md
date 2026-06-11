@@ -6,6 +6,22 @@ Data hub (`$MEMORY_HOME`) is **not** versioned with this file.
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-06-08
+
+### Added
+
+- **`lib/pointer_feedback.py`** — sessionStart `pointer_feedback` metrics (hit/miss/skip) from project `## Next step`
+- **`lib/live_distill.py`** — `liveDistill` event: extract + staging/manifest without `--apply` on sessionStart when watermark changed
+- **`lib/novelty.py`** — filter staging candidates that repeat existing Decisions/Summary/Next step
+- Hub `config.json` thresholds: `distill_token_budget`, `map_reduce_threshold`, `map_reduce_window_size`
+- Extract fields: `tokens_estimated`, `token_budget`, `token_budget_exceeded`
+
+### Changed
+
+- **`memory-health.py`** — `pointer_session_hit_rate`, live distill + budget-exceeded counts
+- **`distill-merge` staging** — novelty filter on raw messages and rolling summary
+- **`handle_session_start`** — live distill for active transcript + pointer feedback logging
+
 ## [0.15.0] - 2026-06-08
 
 ### Added

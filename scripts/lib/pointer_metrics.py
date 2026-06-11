@@ -53,7 +53,7 @@ def maybe_log_pointer_clobbered(
 
 
 def log_pointer_feedback(memory_home: Path, row: dict[str, Any]) -> None:
-    """Reserved for sessionStart hit-rate (v0.16); schema stub for v0.14."""
+    """Session-start pointer usability feedback (v0.16+)."""
     out = dict(row)
     out.setdefault("event", _EVENT_POINTER_FEEDBACK)
     append_metric(memory_home, out)

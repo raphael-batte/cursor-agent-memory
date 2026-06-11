@@ -21,6 +21,7 @@ from lib.defaults import (  # noqa: E402
     MAP_REDUCE_THRESHOLD,
     MAP_REDUCE_WINDOW_SIZE,
     MAX_DISTILL_MESSAGES,
+    load_thresholds,
 )
 from lib.message_importance import mechanical_bullets  # noqa: E402
 from lib.topic_segmentation import segment_messages  # noqa: E402
@@ -41,9 +42,14 @@ KEYWORDS = DEFAULT_KEYWORDS
 STRATEGIES = ("tail", "spread", "all", "auto")
 
 
-def resolve_strategy(strategy: str, total: int) -> str:
+def resolve_strategy(
+    strategy: str,
+    total: int,
+    *,
+    auto_spread_threshold: int = AUTO_SPREAD_THRESHOLD,
+) -> str:
     if strategy == "auto":
-        return "spread" if total > AUTO_SPREAD_THRESHOLD else "tail"
+        return "spread" if total > auto_spread_threshold else "tail"
     return strategy
 
 
@@ -76,12 +82,18 @@ def select_spread(messages: list[str], max_messages: int) -> list[str]:
     return head + mid + tail
 
 
-def select_messages(messages: list[str], max_messages: int, strategy: str) -> list[str]:
+def select_messages(
+    messages: list[str],
+    max_messages: int,
+    strategy: str,
+    *,
+    token_budget: int = DISTILL_TOKEN_BUDGET,
+) -> list[str]:
     if strategy in ("spread", "tail", "auto"):
         picked = select_by_importance(
             messages,
             max_messages=max_messages,
-            token_budget=DISTILL_TOKEN_BUDGET,
+            token_budget=token_budget,
         )
         if picked:
             return picked
@@ -90,9 +102,13 @@ def select_messages(messages: list[str], max_messages: int, strategy: str) -> li
     return select_tail(messages, max_messages)
 
 
-def build_window_summaries(messages: list[str]) -> list[dict]:
+def build_window_summaries(
+    messages: list[str],
+    *,
+    window_size: int = MAP_REDUCE_WINDOW_SIZE,
+) -> list[dict]:
     """Map-reduce windows — mechanical bullets per window for staging."""
-    windows = window_messages(messages, window_size=MAP_REDUCE_WINDOW_SIZE)
+    windows = window_messages(messages, window_size=window_size)
     out: list[dict] = []
     for i, chunk in enumerate(windows, start=1):
         bullets = mechanical_bullets(chunk, max_items=3)
@@ -161,6 +177,19 @@ def build_extract(
     memory_home: Path | None = None,
     manifest_entry: dict | None = None,
 ) -> dict:
+    from lib.memory_config import load_hub_config  # noqa: E402
+    from lib.token_budget import estimate_tokens  # noqa: E402
+
+    thresholds = load_thresholds(
+        load_hub_config(memory_home) if memory_home is not None else None
+    )
+    token_budget = int(thresholds["distill_token_budget"])
+    map_reduce_threshold = int(thresholds["map_reduce_threshold"])
+    map_window_size = int(thresholds["map_reduce_window_size"])
+    auto_spread_threshold = int(thresholds["auto_spread_threshold"])
+    if max_messages is None:
+        max_messages = int(thresholds["max_distill_messages"])
+
     parsed = parse_transcript(jsonl)
     all_msgs: list[str] = []
     secrets_redacted = 0
@@ -178,16 +207,20 @@ def build_extract(
         )
     adapter = parsed.adapter
     total = len(all_msgs)
-    effective = resolve_strategy(strategy, total)
+    effective = resolve_strategy(
+        strategy, total, auto_spread_threshold=auto_spread_threshold
+    )
 
-    if effective == "all" or max_messages is None:
+    if effective == "all":
         messages = all_msgs
     elif max_messages <= 0:
         messages = []
     elif total <= max_messages:
         messages = all_msgs
     else:
-        messages = select_messages(all_msgs, max_messages, effective)
+        messages = select_messages(
+            all_msgs, max_messages, effective, token_budget=token_budget
+        )
 
     workspace = workspace_from_path(jsonl, projects_root)
     st = jsonl.stat()
@@ -196,9 +229,12 @@ def build_extract(
     final_summary = parsed.last_assistant_summary()
     assistant_snippets = extract_assistant_snippets_from_parsed(parsed)
     window_summaries = (
-        build_window_summaries(all_msgs) if total >= MAP_REDUCE_THRESHOLD else []
+        build_window_summaries(all_msgs, window_size=map_window_size)
+        if total >= map_reduce_threshold
+        else []
     )
     topic_segments = segment_messages(all_msgs) if total >= 20 else []
+    tokens_estimated = sum(estimate_tokens(m) for m in messages)
     open_todo_items = parsed.open_todos()
     from lib.transcript_stats import transcript_watermark  # noqa: E402
 
@@ -240,6 +276,9 @@ def build_extract(
         "all_todos_completed": parsed.all_todos_completed,
         "watermark_user_count": int(wm.get("user_message_count") or 0),
         "watermark_tail_hash": str(wm.get("tail_hash") or ""),
+        "tokens_estimated": tokens_estimated,
+        "token_budget": token_budget,
+        "token_budget_exceeded": tokens_estimated > token_budget,
     }
     if incremental:
         payload["incremental"] = incremental

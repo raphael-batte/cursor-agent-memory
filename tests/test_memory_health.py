@@ -51,6 +51,23 @@ class TestMemoryHealth(unittest.TestCase):
             self.assertEqual(data["pointer_extracted_rate"], 1.0)
             self.assertEqual(data["baseline"]["samples"], 1)
 
+    def test_session_pointer_hit_rate(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            hub = Path(tmp)
+            append_metric(
+                hub,
+                {"event": "pointer_feedback", "outcome": "hit", "workspace_slug": "app"},
+            )
+            append_metric(
+                hub,
+                {"event": "pointer_feedback", "outcome": "miss", "workspace_slug": "app2"},
+            )
+            mh = _load_memory_health()
+            data = mh.analyze_metrics(read_metrics(hub), days=7)
+            self.assertEqual(data["pointer_feedback_hits"], 1)
+            self.assertEqual(data["pointer_feedback_miss"], 1)
+            self.assertEqual(data["pointer_session_hit_rate"], 0.5)
+
 
 if __name__ == "__main__":
     unittest.main()

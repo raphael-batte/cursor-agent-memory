@@ -79,6 +79,9 @@ def load_thresholds(hub_config: dict[str, Any] | None = None) -> dict[str, int]:
     out = {
         "max_distill_messages": MAX_DISTILL_MESSAGES,
         "auto_spread_threshold": AUTO_SPREAD_THRESHOLD,
+        "distill_token_budget": DISTILL_TOKEN_BUDGET,
+        "map_reduce_threshold": MAP_REDUCE_THRESHOLD,
+        "map_reduce_window_size": MAP_REDUCE_WINDOW_SIZE,
         "max_layer_file_lines": MAX_LAYER_FILE_LINES,
         "rotation_warn_lines": ROTATION_WARN_LINES,
     }

@@ -27,6 +27,7 @@ from lib.apply_guard import check_cli_apply_guard  # noqa: E402
 from lib.defaults import APPLY_REVIEW_MAX_DAYS  # noqa: E402
 from lib.distill_links import enrich_extract, recent_bullet  # noqa: E402
 from lib.memory_config import resolve_memory_home  # noqa: E402
+from lib.novelty import collect_prior_texts, filter_novel_items  # noqa: E402
 from lib.project_merge import apply_extract_to_project  # noqa: E402
 from lib.timestamps import now_iso, staging_date_slug  # noqa: E402
 from lib.transcript import find_transcript, workspace_slug  # noqa: E402
@@ -39,13 +40,19 @@ def load_extract(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def build_staging_markdown(extract: dict, *, project_rel: str) -> str:
+def build_staging_markdown(
+    extract: dict,
+    *,
+    project_rel: str,
+    project_path: Path | None = None,
+) -> str:
     """Staging file for agent merge — verbatim user messages, no translation."""
     slug = extract.get("workspace_slug", "unknown")
     uid = extract.get("uuid", "?")
     today = now_iso()
     keywords = ", ".join(extract.get("keywords_hit") or []) or "—"
-    msgs = extract.get("user_messages") or []
+    prior_texts = collect_prior_texts(project_path)
+    msgs = filter_novel_items(extract.get("user_messages") or [], prior_texts)
 
     lines = [
         f"# Distill staging — {slug}",
@@ -84,7 +91,7 @@ def build_staging_markdown(extract: dict, *, project_rel: str) -> str:
         if snippet:
             lines.append(f"- {snippet}")
 
-    rolling = extract.get("rolling_summary") or []
+    rolling = filter_novel_items(extract.get("rolling_summary") or [], prior_texts)
     if rolling:
         lines.extend(["", "## Rolling summary (incremental)", ""])
         for bullet in rolling[:8]:
@@ -211,13 +218,14 @@ def run_merge(
         watermark_tail_hash=str(wm.get("tail_hash") or ""),
     )
 
+    project_path = memory_home / "chats" / project_rel
     staging_dir = memory_home / "chats" / "merge-staging"
     staging_path = (
         staging_dir / f"{slug}-{staging_date_slug(entry['distilled_at'])}-{safe_id[:8]}.md"
     )
-    staging_md = build_staging_markdown(extract, project_rel=project_rel)
-
-    project_path = memory_home / "chats" / project_rel
+    staging_md = build_staging_markdown(
+        extract, project_rel=project_rel, project_path=project_path
+    )
 
     result = {
         "chat_id": chat_id,

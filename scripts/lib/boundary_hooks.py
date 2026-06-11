@@ -30,6 +30,8 @@ from lib.pending_chats import (  # noqa: E402
     needs_distill,
     slugs_from_workspace_roots,
 )
+from lib.live_distill import run_live_distill, should_live_distill  # noqa: E402
+from lib.pointer_feedback import log_session_start_pointer_feedback  # noqa: E402
 from lib.transcript import TranscriptSchemaError, find_transcript  # noqa: E402
 
 DEFAULT_PROJECTS_ROOT = Path.home() / ".cursor/projects"
@@ -188,6 +190,9 @@ def distill_jsonl(
             "pointer_source": apply_result.get("pointer_source"),
             "incremental": bool((extract.get("incremental") or {}).get("is_incremental")),
             "window_count": len(extract.get("window_summaries") or []),
+            "tokens_estimated": int(extract.get("tokens_estimated") or 0),
+            "token_budget_exceeded": bool(extract.get("token_budget_exceeded")),
+            "live_apply": bool(apply),
         },
     )
     record_boundary_distill(memory_home, chat_id)
@@ -393,10 +398,42 @@ def handle_session_start(
         result["catchup"] = {"status": "skipped", "reason": "first_run_pending"}
         return result
 
+    slugs = slugs_from_workspace_roots(payload.get("workspace_roots") or [])
     catchup = run_session_start_catchup(
         payload, memory_home=memory_home, projects_root=projects_root
     )
     result["catchup"] = catchup
+
+    live_result: dict[str, Any] = {"status": "skipped", "reason": "no_transcript"}
+    jsonl = resolve_transcript_jsonl(
+        payload, memory_home=memory_home, projects_root=projects_root
+    )
+    if jsonl is not None:
+        chat_id = jsonl.stem
+        if should_skip_debounce(memory_home, chat_id):
+            live_result = {"status": "skipped", "reason": "debounced", "chat_id": chat_id}
+        elif should_live_distill(memory_home, chat_id, jsonl):
+            live_result = run_live_distill(
+                distill_jsonl,
+                jsonl,
+                memory_home=memory_home,
+                projects_root=projects_root,
+            )
+        else:
+            live_result = {
+                "status": "skipped",
+                "reason": "already_distilled",
+                "chat_id": chat_id,
+            }
+    result["live_distill"] = live_result
+
+    try:
+        result["pointer_feedback"] = log_session_start_pointer_feedback(
+            memory_home, slugs
+        )
+    except OSError:
+        result["pointer_feedback"] = []
+
     msg = session_start_user_message(
         memory_home, payload.get("workspace_roots") or []
     )
